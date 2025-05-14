@@ -15,7 +15,7 @@ type nul > Categories.tsx
 type nul > Products.tsx
 type nul > Reports.tsx
 type nul > Charts.tsx
-type nul > POS.tsx
+type nul > PDV.tsx
 type nul > Users.tsx
 cd ..
 

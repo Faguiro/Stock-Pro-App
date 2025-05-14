@@ -6,7 +6,7 @@ import Categories from '../pages/Categories';
 import Products from '../pages/Products';
 import Reports from '../pages/Reports';
 import Charts from '../pages/Charts';
-import POS from '../pages/POS';
+import PDV from '../pages/PDV';
 // import Users from '../pages/Users';
 import MainLayout from '../layout/MainLayout';
 import UsersAdmins from '../pages/UsersAdmins';
@@ -29,7 +29,7 @@ export default function AppRoutes() {
         <Route path="/clientes" element={<Clients />} />
         <Route path="/relatorios" element={<Reports />} />
         <Route path="/graficos" element={<Charts />} />
-        <Route path="/pdv" element={<POS />} />
+        <Route path="/pdv" element={<PDV />} />
         {/* <Route path="/usuarios/admins" element={<Users />} />
         <Route path="/usuarios/vendedores" element={<Users />} /> */}
         <Route path="*" element={<NotFound />} />

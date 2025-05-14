@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react'
 import type { IconType } from 'react-icons'
 import api from "../lib/api" 
 import { Navigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 interface DashboardData {
   totalStock: number
@@ -109,10 +110,8 @@ export default function Dashboard() {
   }, [])
 
 
-   if (data === null || data.vendedor === null || data.vendedor.vendedor === null) {
-      //redirecionar para login:
-      return <Navigate to="/login" />
-    }
+  const { user } = useAuth()
+if (!user) return <Navigate to="/login" />
 
   return (
     <Box flex="1" p={8}>

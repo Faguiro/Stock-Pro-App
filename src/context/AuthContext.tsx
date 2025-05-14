@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = async (identifier: string, password: string) => {
         try {
             const response = await api.post(
-                'http://127.0.0.1:8000/api/v1/auth/login',
+                '/auth/login',
                 `username=${identifier}&password=${password}`,
                 {
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

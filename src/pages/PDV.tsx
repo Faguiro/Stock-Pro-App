@@ -5,9 +5,12 @@ import {
     Tr, Th, Td, TableContainer, useToast, Select, Text,
     Divider, Stat, StatLabel, StatNumber, Stack,
     Input,
+    RadioGroup,
+    Radio,
 } from '@chakra-ui/react'
-import { useEffect, useState } from 'react'
+import {  useEffect, useState } from 'react'
 import api from '../lib/api'
+import React from 'react'
 
 
 export interface Produto {
@@ -20,6 +23,7 @@ export interface Produto {
 
 }
 export interface Cliente {
+    email: string | null
     id: number
     nome: string
 }
@@ -28,6 +32,16 @@ export interface Promocao {
     tipo: string
     valor: number
 }
+export interface clienteInput {
+    nome: string
+    email: string | null
+    telefone: string
+    endereco: string
+    preferencias: Record<string, any>
+    observacoes: string
+
+}
+
 
 
 
@@ -50,15 +64,35 @@ export default function PDV() {
     const [forma_pagamento, setFormaPagamento] = useState<'dinheiro' | 'cartão' | 'transferencia' | 'pix'>('dinheiro')
 
     const [modoCliente, setModoCliente] = useState<boolean>(false)
+    const [value, setValue] = React.useState('1')
 
-    const [novoCliente, setNovoCliente] = useState({ 
-        nome: '', 
-        email: "" , 
-        telefone: '', 
-        endereco: '', 
-        preferencias: {}, 
-        observacoes: '' })
+    const [novoCliente, setNovoCliente] = useState<clienteInput>({
+        nome: '',
+        email: '',
+        telefone: '',
+        endereco: '',
+        preferencias: {},
+        observacoes: ''
+    })
     const [novoClienteLoading, setNovoClienteLoading] = useState(false)
+
+     useEffect(() => {
+        setValue('1')
+    },[])
+
+
+
+
+    function ModoBusca() {
+        return (
+            <RadioGroup onChange={setValue} value={value}>
+                <Stack direction='row'>
+                    <Radio value='1'>Codigo de barras</Radio>
+                    <Radio value='2'>Categorias</Radio>
+                </Stack>
+            </RadioGroup>
+        )
+    }
 
 
     const totalCarrinho: number = carrinho.reduce(
@@ -71,8 +105,6 @@ export default function PDV() {
         0
     )
 
-
-
     // Função para calcular o preço baseado no modo e quantidade
     const calcularPreco = (produto: Produto, modo: 'varejo' | 'atacado', quantidade: number) => {
         const podeUsarAtacado = modo === 'atacado' && quantidade >= 5 && produto.preco_atacado
@@ -84,14 +116,16 @@ export default function PDV() {
         return precoBase - desconto
     }
 
-    const addCliente = async (cliente: { 
-        nome: string; 
-        email: string; 
-        telefone: string; 
-        endereco: string; 
-        preferencias: Record<string, any>; 
-        observacoes: string  }) => {
+    const addCliente = async (cliente: {
+        nome: string;
+        email: string | null;
+        telefone: string;
+        endereco: string;
+        preferencias: Record<string, any>;
+        observacoes: string
+    }) => {
         try {
+            if (cliente.email && cliente.email.length < 1) cliente.email = null
             setNovoClienteLoading(true)
             const res = await api.post('/customers', cliente)
             setClientes([...clientes, res.data])
@@ -134,20 +168,34 @@ export default function PDV() {
         fetchCategorias()
     }, [])
 
+
+   
+
     useEffect(() => {
         const fetchProdutos = async () => {
             if (!categoriaSelecionada) return
+
+            let res
             try {
-                const res = await api.get(`/products?categoryId=${categoriaSelecionada}`)
-                setProdutos(res.data)
-                console.log(res.data)
+                if (value === '1') {
+                    res = await api.get(`/products`)
+                }
+                else if (value === '2') {
+
+                    res = await api.get(`/products?categoryId=${categoriaSelecionada}`)
+                }
+
+                if (res && res.data) {
+                    setProdutos(res.data)
+                    console.log(res.data)
+                }
             } catch {
                 toast({ title: 'Erro ao buscar produtos da categoria', status: 'error' })
             }
         }
 
         fetchProdutos()
-    }, [categoriaSelecionada, carrinho])
+    }, [categoriaSelecionada, carrinho, value])
 
     const adicionarAoCarrinho = (produto: any) => {
         setCarrinho(prev => {
@@ -266,11 +314,11 @@ export default function PDV() {
             })
 
             toast(
-                { 
-                    title: 'Venda finalizada com sucesso', 
-                    status: 'success' 
+                {
+                    title: 'Venda finalizada com sucesso',
+                    status: 'success'
                 })
-                
+
             setCarrinho([])
             setClienteId('')
         } catch (err: any) {
@@ -322,25 +370,30 @@ export default function PDV() {
 
                             <Input
                                 placeholder="Email do cliente"
-                                value={novoCliente.email}
-                                onChange={(e) =>
-                                    setNovoCliente({ ...novoCliente, email: e.target.value })
+                                value={novoCliente.email || ''}
+                                onChange={(e) => {
+                                    if (e.target.value.length < 1 || !e.target.value.includes('@')) {
+                                        setNovoCliente({ ...novoCliente, email: null })
+                                    }
+                                    if (e.target.value.includes('@'))
+                                        setNovoCliente({ ...novoCliente, email: e.target.value })
+                                }
                                 }
                             />
 
                             <Button
                                 colorScheme="blue"
                                 ml={1}
-                                isDisabled={novoClienteLoading}                                
+                                isDisabled={novoClienteLoading}
                                 isLoading={novoClienteLoading}
                                 onClick={() => {
                                     setNovoClienteLoading(true);
-                                    addCliente({ ...novoCliente, email: "" });                               
+                                    addCliente({ ...novoCliente });
                                     setModoCliente(false);
                                     setNovoClienteLoading(false);
                                 }}
                             >
-                             <Text px={2}>Salvar</Text>  
+                                <Text px={2}>Salvar</Text>
                             </Button>
                         </Flex>
                     ) : (
@@ -434,15 +487,6 @@ export default function PDV() {
                     </Stack>
                     <Divider my={4} />
                     <Heading size="md" mb={4}>Forma de Pagamento</Heading>
-
-
-
-
-
-
-
-
-
                     <Flex mb={4} gap={4} direction={['column', 'row']}>
 
                         <Select placeholder="Selecionar forma de pagamento" mb={4}
@@ -468,7 +512,7 @@ export default function PDV() {
 
 
                     <VStack align="start" mt={6}>
-                     { loadingVenda &&     <Button
+                        {!loadingVenda && <Button
                             colorScheme="blue"
                             onClick={finalizarVenda}
                             // isLoading={}
@@ -484,35 +528,13 @@ export default function PDV() {
 
                 </Box>
 
+
                 {/* Lado direito: Categorias + Produtos */}
                 <Box flex="0 0 40%" bg="gray.50" flexShrink={0} p={4} borderRadius="md" boxShadow="sm" overflow="hidden">
-                    <Heading size="md" mb={2}>Categorias</Heading>
-                    <Flex wrap="wrap" gap={2} mb={4}>
-                        {categorias.map((cat: any) => (
-                            <Button
-                                key={cat.id}
-                                onClick={() => setCategoriaSelecionada(cat.id)}
-                                colorScheme={cat.id === categoriaSelecionada ? 'blue' : 'gray'}
-                                size="sm"
-                            >
-                                {cat.nome}
-                            </Button>
-                        ))}
-                    </Flex>
 
-                    {/* <Heading size="sm" mb={2}>Tipo de Preço</Heading> */}
-                    {/* <RadioGroup
-                        onChange={(val: 'varejo' | 'atacado') => setModoPreco(val)}
-                        value={modoPreco}
-                        mb={4}
-                    >
-                        <Stack direction="row">
-                            <Radio value="varejo">Varejo</Radio>
-                            <Radio value="atacado">Atacado</Radio>
-                        </Stack>
-                    </RadioGroup> */}
+                    <ModoBusca />
 
-                    {categoriaSelecionada && (
+                    {value === '1' && (
                         <>
                             <Divider my={4} />
                             <Heading size="sm" mb={2}>Produtos</Heading>
@@ -525,13 +547,11 @@ export default function PDV() {
                             {produtos.length === 0 ? (
                                 <Text color="gray.900">Nenhum produto encontrado nesta categoria.</Text>
                             ) : (
-                                <TableContainer>
+                                <TableContainer overflowY="auto" maxHeight="500px">
                                     <Table variant="simple" size="sm">
-                                        <Thead>
-                                            <Tr >
+                                        <Thead position="sticky" top={0} bg="white" zIndex={1}>
+                                            <Tr>
                                                 <Th>Produto</Th>
-                                                {/* <Th isNumeric>Preço Atacado</Th>
-                                                <Th isNumeric>Preço Varejo</Th> */}
                                                 <Th isNumeric>Estoque</Th>
                                                 <Th>Ação</Th>
                                             </Tr>
@@ -539,9 +559,7 @@ export default function PDV() {
                                         <Tbody>
                                             {filteredProducts.map((prod: any) => (
                                                 <Tr key={prod.id} _hover={{ bg: 'gray.100' }}>
-                                                    <Td fontSize={'xs'}>{prod.nome}</Td>
-                                                    {/* <Td isNumeric>R$ {prod.preco_atacado?.toFixed(2) || '0.00'}</Td>
-                                                    <Td isNumeric>R$ {prod.preco_venda?.toFixed(2) || '0.00'}</Td> */}
+                                                    <Td fontSize="xs">{prod.nome}</Td>
                                                     <Td isNumeric>{prod.quantidade_estoque}</Td>
                                                     <Td>
                                                         <Button
@@ -557,9 +575,80 @@ export default function PDV() {
                                         </Tbody>
                                     </Table>
                                 </TableContainer>
+
                             )}
+
                         </>
                     )}
+                    {value === '2' && (
+                        <>
+
+                            <Heading size="md" mb={2}>Categorias</Heading>
+                            <Flex wrap="wrap" gap={2} mb={4}>
+                                {categorias.map((cat: any) => (
+                                    <Button
+                                        key={cat.id}
+                                        onClick={() => setCategoriaSelecionada(cat.id)}
+                                        colorScheme={cat.id === categoriaSelecionada ? 'blue' : 'gray'}
+                                        size="sm"
+                                    >
+                                        {cat.nome}
+                                    </Button>
+                                ))}
+                            </Flex>
+
+                            {categoriaSelecionada && (
+                                <>
+                                    <Divider my={4} />
+                                    <Heading size="sm" mb={2}>Produtos</Heading>
+                                    <Input
+                                        placeholder="Buscar produtos..."
+                                        value={searchTerm}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                                        mb={4}
+                                    />
+                                    {produtos.length === 0 ? (
+                                        <Text color="gray.900">Nenhum produto encontrado nesta categoria.</Text>
+                                    ) : (
+                                        <TableContainer>
+                                            <Table variant="simple" size="sm">
+                                                <Thead>
+                                                    <Tr >
+                                                        <Th>Produto</Th>
+                                                        {/* <Th isNumeric>Preço Atacado</Th>
+                                                <Th isNumeric>Preço Varejo</Th> */}
+                                                        <Th isNumeric>Estoque</Th>
+                                                        <Th>Ação</Th>
+                                                    </Tr>
+                                                </Thead>
+                                                <Tbody>
+                                                    {filteredProducts.map((prod: any) => (
+                                                        <Tr key={prod.id} _hover={{ bg: 'gray.100' }}>
+                                                            <Td fontSize={'xs'}>{prod.nome}</Td>
+                                                            <Td isNumeric>{prod.quantidade_estoque}</Td>
+                                                            <Td>
+                                                                <Button
+                                                                    size="xs"
+                                                                    colorScheme="blue"
+                                                                    onClick={() => adicionarAoCarrinho(prod)}
+                                                                >
+                                                                    Adicionar
+                                                                </Button>
+                                                            </Td>
+                                                        </Tr>
+                                                    ))}
+                                                </Tbody>
+                                            </Table>
+                                        </TableContainer>
+                                    )}
+                                </>
+                            )}
+
+                        </>
+                    )}
+
+
+
                 </Box>
 
             </Flex >
