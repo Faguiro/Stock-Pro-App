@@ -43,7 +43,7 @@ export default function LoginPage() {
       <Container maxW="md" bg={bgColor} boxShadow="xl" borderRadius="lg" p={10}>
         <VStack spacing={6} align="stretch">
           <Box textAlign="center">
-            <Heading size="lg" color="blue.600">Bem-vindo ao EstokaPro</Heading>
+            <Heading size="lg" color="blue.600">Bem-vindo ao EstockPro</Heading>
             <Text fontSize="sm" color="gray.600" mt={2}>
               Organize, controle e cresça. O estoque certo é o seu lucro garantido!
             </Text>

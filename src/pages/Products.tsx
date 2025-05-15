@@ -1,16 +1,42 @@
 "use client";
-import api from '../lib/api';
+import api from "../lib/api";
 import {
-  Box, Button, Card, CardBody, CardFooter, Heading, SimpleGrid, Text,
-  Modal, ModalOverlay, ModalContent, ModalHeader, ModalFooter, ModalBody,
-  ModalCloseButton, useDisclosure, FormControl, FormLabel, Input,
-  NumberInput, NumberInputField, Select, useToast, Spinner, Alert,
-  AlertIcon, Tag, Flex, List, ListItem, HStack, IconButton,
-} from '@chakra-ui/react';
-import { FaList, FaTh } from 'react-icons/fa';
-import { useEffect, useState } from 'react';
-
-
+  Box,
+  Button,
+  Card,
+  CardBody,
+  CardFooter,
+  Heading,
+  SimpleGrid,
+  Text,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
+  FormControl,
+  FormLabel,
+  Input,
+  NumberInput,
+  NumberInputField,
+  Select,
+  useToast,
+  Spinner,
+  Alert,
+  AlertIcon,
+  Tag,
+  Flex,
+  List,
+  ListItem,
+  HStack,
+  IconButton,
+} from "@chakra-ui/react";
+import { NumericFormat } from "react-number-format";
+import { FaList, FaTh } from "react-icons/fa";
+import { useEffect, useState } from "react";
 
 interface Product {
   id: number;
@@ -36,27 +62,31 @@ const ProductsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [categorias, setCategorias] = useState<any[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  // const [codigo, setCodigo] = useState<string>("")
+
   const toast = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [categoriesRes, productsRes, stockRes] = await Promise.all([
-          api.get('/categories'),
-          api.get('/products'),
-          api.get('/stock/with-product-names')
+          api.get("/categories"),
+          api.get("/products"),
+          api.get("/stock/with-product-names"),
         ]);
 
         setCategorias(categoriesRes.data);
 
         const productsWithStock = productsRes.data.map((product: any) => {
-          const stockItem = stockRes.data.find((s: any) => s.product_id === product.id);
+          const stockItem = stockRes.data.find(
+            (s: any) => s.product_id === product.id
+          );
           return {
             ...product,
-            quantidade_estoque: stockItem?.quantity || 0
+            quantidade_estoque: stockItem?.quantity || 0,
           };
         });
 
@@ -70,25 +100,25 @@ const ProductsPage = () => {
     fetchData();
   }, []);
 
-  const handleCreateProduct = async (newProductData: Omit<Product, 'id'>) => {
+  const handleCreateProduct = async (newProductData: Omit<Product, "id">) => {
     try {
-      const response = await api.post('/products', newProductData);
+      const response = await api.post("/products", newProductData);
       if (response.status >= 200 && response.status < 300) {
         const createdProduct = response.data;
-        setProducts(prev => [...prev, createdProduct]);
+        setProducts((prev) => [...prev, createdProduct]);
         onClose();
         toast({
-          title: 'Produto criado',
-          status: 'success',
+          title: "Produto criado",
+          status: "success",
           duration: 3000,
           isClosable: true,
         });
       }
     } catch (error) {
       toast({
-        title: 'Erro',
+        title: "Erro",
         description: (error as Error).message,
-        status: 'error',
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
@@ -98,18 +128,18 @@ const ProductsPage = () => {
   const handleDeleteProduct = async (productId: number) => {
     try {
       await api.delete(`/products/${productId}`);
-      setProducts(products.filter(p => p.id !== productId));
+      setProducts(products.filter((p) => p.id !== productId));
       toast({
-        title: 'Produto deletado',
-        status: 'success',
+        title: "Produto deletado",
+        status: "success",
         duration: 3000,
         isClosable: true,
       });
     } catch (err) {
       toast({
-        title: 'Erro',
+        title: "Erro",
         description: (err as Error).message,
-        status: 'error',
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
@@ -119,69 +149,80 @@ const ProductsPage = () => {
   const handleAddStock = async (productId: number, quantityToAdd: number) => {
     try {
       await api.put(`/stock/${productId}`, { quantity: quantityToAdd });
-  
+
       // Atualiza o estado local após a adição
-      setProducts(prev =>
-        prev.map(p =>
+      setProducts((prev) =>
+        prev.map((p) =>
           p.id === productId
             ? { ...p, quantidade_estoque: p.quantidade_estoque + quantityToAdd }
             : p
         )
       );
-  
+
       toast({
-        title: 'Estoque atualizado',
-        status: 'success',
+        title: "Estoque atualizado",
+        status: "success",
         duration: 3000,
         isClosable: true,
       });
     } catch (err) {
       toast({
-        title: 'Erro ao adicionar estoque',
+        title: "Erro ao adicionar estoque",
         description: (err as Error).message,
-        status: 'error',
+        status: "error",
         duration: 3000,
         isClosable: true,
       });
     }
   };
-  
 
-  const filteredProducts = products.filter(product =>
-    product.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    categorias.find(cat => cat.id === product.categoria_id)?.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProducts = products.filter(
+    (product) =>
+      product.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.codigo.includes(searchTerm) ||
+      categorias
+        .find((cat) => cat.id === product.categoria_id)
+        ?.nome.toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
 
-  if (isLoading) return (
-    <Box textAlign="center" mt={20}>
-      <Spinner size="xl" thickness="4px" />
-      <Text mt={4}>Carregando produtos...</Text>
-    </Box>
-  );
+  if (isLoading)
+    return (
+      <Box textAlign="center" mt={20}>
+        <Spinner size="xl" thickness="4px" />
+        <Text mt={4}>Carregando produtos...</Text>
+      </Box>
+    );
 
-  if (error) return (
-    <Alert status="error" variant="left-accent" borderRadius="md" mx={4}>
-      <AlertIcon />
-      {error}
-    </Alert>
-  );
+  if (error)
+    return (
+      <Alert status="error" variant="left-accent" borderRadius="md" mx={4}>
+        <AlertIcon />
+        {error}
+      </Alert>
+    );
 
   return (
     <Box p={8} maxW="1400px" mx="auto">
-      <Heading mb={8} display="flex" justifyContent="space-between" alignItems="center">
+      <Heading
+        mb={8}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+      >
         Produtos
         <HStack spacing={4}>
           <IconButton
             icon={<FaTh />}
             aria-label="Visualização em grid"
-            colorScheme={viewMode === 'grid' ? 'blue' : 'gray'}
-            onClick={() => setViewMode('grid')}
+            colorScheme={viewMode === "grid" ? "blue" : "gray"}
+            onClick={() => setViewMode("grid")}
           />
           <IconButton
             icon={<FaList />}
             aria-label="Visualização em lista"
-            colorScheme={viewMode === 'list' ? 'blue' : 'gray'}
-            onClick={() => setViewMode('list')}
+            colorScheme={viewMode === "list" ? "blue" : "gray"}
+            onClick={() => setViewMode("list")}
           />
           <Button colorScheme="blue" onClick={onOpen}>
             Novo Produto
@@ -198,12 +239,12 @@ const ProductsPage = () => {
         focusBorderColor="blue.200"
       />
 
-      {viewMode === 'grid' ? (
+      {viewMode === "grid" ? (
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
           {filteredProducts.map((product) => (
-            <ProductCard 
-              key={product.id} 
-              product={product} 
+            <ProductCard
+              key={product.id}
+              product={product}
               categorias={categorias}
               onSelect={setSelectedProduct}
               onDelete={handleDeleteProduct}
@@ -214,7 +255,7 @@ const ProductsPage = () => {
         <List spacing={4}>
           {filteredProducts.map((product) => (
             <ProductListItem
-              key={product.id}             
+              key={product.id}
               product={product}
               categorias={categorias}
               onSelect={setSelectedProduct}
@@ -228,7 +269,7 @@ const ProductsPage = () => {
         isOpen={isOpen}
         onClose={onClose}
         onCreate={handleCreateProduct}
-        categorias={categorias}      
+        categorias={categorias}
       />
 
       <ProductDetailModal
@@ -242,30 +283,46 @@ const ProductsPage = () => {
 };
 
 // Componente de Card
-const ProductCard = ({ product, categorias, onSelect, onDelete }: {
+const ProductCard = ({
+  product,
+  categorias,
+  onSelect,
+  onDelete,
+}: {
   product: Product;
   categorias: any[];
   onSelect: (product: Product) => void;
   onDelete: (id: number) => void;
 }) => (
-  <Card boxShadow="md" _hover={{ transform: 'translateY(-2px)', transition: '0.2s' }}>
+  <Card
+    boxShadow="md"
+    _hover={{ transform: "translateY(-2px)", transition: "0.2s" }}
+  >
     <CardBody>
-      <Heading size="md" mb={2}>{product.nome}</Heading>
+      <Heading size="md" mb={2}>
+        {product.nome}
+      </Heading>
       <Text fontSize="sm" color="gray.600">
-        {categorias.find(cat => cat.id === product.categoria_id)?.nome}
+        {product.codigo}
       </Text>
-      
+      <Text fontSize="sm" color="gray.600">
+        {categorias.find((cat) => cat.id === product.categoria_id)?.nome}
+      </Text>
+
       <Flex align="center" mt={3}>
         <Text fontWeight="semibold">Estoque:</Text>
         <Tag
           ml={2}
           colorScheme={
-            product.quantidade_estoque === 0 ? 'red' :
-            product.quantidade_estoque < 10 ? 'orange' : 'green'
+            product.quantidade_estoque === 0
+              ? "red"
+              : product.quantidade_estoque < 10
+              ? "orange"
+              : "green"
           }
         >
           {product.quantidade_estoque}
-          {product.quantidade_estoque < 10 && ' (Baixo)'}
+          {product.quantidade_estoque < 10 && " (Baixo)"}
         </Tag>
       </Flex>
 
@@ -295,7 +352,12 @@ const ProductCard = ({ product, categorias, onSelect, onDelete }: {
 );
 
 // Componente de List Item
-const ProductListItem = ({ product, categorias, onSelect, onDelete }: {
+const ProductListItem = ({
+  product,
+  categorias,
+  onSelect,
+  onDelete,
+}: {
   product: Product;
   categorias: any[];
   onSelect: (product: Product) => void;
@@ -305,36 +367,40 @@ const ProductListItem = ({ product, categorias, onSelect, onDelete }: {
     p={4}
     borderWidth="1px"
     borderRadius="md"
-    _hover={{ shadow: 'md' }}
+    _hover={{ shadow: "md" }}
     display="flex"
     justifyContent="space-between"
     alignItems="center"
   >
     <Box>
       <Flex align="center" mb={1}>
-        <Heading size="sm" mr={3}>{product.nome}</Heading>
+        <Heading size="sm" mr={3}>
+          {product.nome}
+        </Heading>
         <Text fontSize="sm" color="gray.600">
-          {categorias.find(cat => cat.id === product.categoria_id)?.nome}
+          {categorias.find((cat) => cat.id === product.categoria_id)?.nome}
         </Text>
       </Flex>
-      
+
       <Flex align="center">
-        <Text mr={3}>Estoque: 
+        <Text mr={3}>
+          Estoque:
           <Tag
             ml={2}
             colorScheme={
-              product.quantidade_estoque === 0 ? 'red' :
-              product.quantidade_estoque < 10 ? 'orange' : 'green'
+              product.quantidade_estoque === 0
+                ? "red"
+                : product.quantidade_estoque < 10
+                ? "orange"
+                : "green"
             }
           >
             {product.quantidade_estoque}
-            {product.quantidade_estoque < 10 && ' (Baixo)'}
+            {product.quantidade_estoque < 10 && " (Baixo)"}
           </Tag>
         </Text>
-        
-        <Text fontWeight="bold">
-          R$ {product.preco_venda.toFixed(2)}
-        </Text>
+
+        <Text fontWeight="bold">R$ {product.preco_venda.toFixed(2)}</Text>
       </Flex>
     </Box>
 
@@ -360,15 +426,20 @@ const ProductListItem = ({ product, categorias, onSelect, onDelete }: {
 );
 
 // Componente de Modal para Criar Produto
-const CreateProductModal = ({ isOpen, onClose, onCreate, categorias }: {
+export const CreateProductModal = ({
+  isOpen,
+  onClose,
+  onCreate,
+  categorias,
+}: {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (product: Omit<Product, 'id'>) => void;
+  onCreate: (product: Omit<Product, "id">) => void;
   categorias: any[];
 }) => {
   const [formData, setFormData] = useState({
-    nome: '',
-    codigo: '',
+    nome: "",
+    codigo: "",
     categoria_id: categorias[0]?.id || 1,
     preco_compra: 0,
     preco_venda: 0,
@@ -394,7 +465,19 @@ const CreateProductModal = ({ isOpen, onClose, onCreate, categorias }: {
               <FormLabel>Nome do Produto</FormLabel>
               <Input
                 value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, nome: e.target.value })
+                }
+              />
+            </FormControl>
+
+            <FormControl mb={4}>
+              <FormLabel>Código de barras</FormLabel>
+              <Input
+                value={formData.codigo}
+                onChange={(e) =>
+                  setFormData({ ...formData, codigo: e.target.value })
+                }
               />
             </FormControl>
 
@@ -402,10 +485,14 @@ const CreateProductModal = ({ isOpen, onClose, onCreate, categorias }: {
               <FormLabel>Categoria</FormLabel>
               <Select
                 value={formData.categoria_id}
-                onChange={(e) => setFormData({ ...formData, categoria_id: +e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, categoria_id: +e.target.value })
+                }
               >
                 {categorias.map((cat: any) => (
-                  <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nome}
+                  </option>
                 ))}
               </Select>
             </FormControl>
@@ -413,39 +500,61 @@ const CreateProductModal = ({ isOpen, onClose, onCreate, categorias }: {
             <SimpleGrid columns={2} spacing={4}>
               <FormControl isRequired>
                 <FormLabel>Preço de Compra</FormLabel>
-                <NumberInput
-                  min={0}
-                  precision={2}
+
+                <NumericFormat
+                  customInput={Input}
                   value={formData.preco_compra}
-                  onChange={(_, v) => setFormData({ ...formData, preco_compra: v })}
-                >
-                  <NumberInputField />
-                </NumberInput>
+                  onValueChange={(values) =>
+                    setFormData({
+                      ...formData,
+                      preco_compra: Number(values.value),
+                    })
+                  }
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  prefix="R$ "
+                  decimalScale={2}
+                  fixedDecimalScale
+                  allowNegative={false}
+                />
               </FormControl>
 
               <FormControl isRequired>
                 <FormLabel>Preço de Venda</FormLabel>
-                <NumberInput
-                  min={0}
-                  precision={2}
+                <NumericFormat
+                  customInput={Input}
                   value={formData.preco_venda}
-                  onChange={(_, v) => setFormData({ ...formData, preco_venda: v })}
-                >
-                  <NumberInputField />
-                </NumberInput>
+                  onValueChange={(values) =>
+                    setFormData({
+                      ...formData,
+                      preco_venda: Number(values.value), 
+                    })
+                  }
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  prefix="R$ "
+                  decimalScale={2}
+                  fixedDecimalScale
+                  allowNegative={false}
+                />
               </FormControl>
             </SimpleGrid>
 
             <FormControl mt={4}>
-              <FormLabel>Preço Atacado (Opcional)</FormLabel>
-              <NumberInput
-                min={0}
-                precision={2}
-                value={formData.preco_atacado || ''}
-                onChange={(_, v) => setFormData({ ...formData, preco_atacado: v })}
-              >
-                <NumberInputField />
-              </NumberInput>
+              <FormLabel>Preço Atacado</FormLabel>
+              <NumericFormat
+                customInput={Input}
+                value={formData.preco_atacado || ""}
+                onValueChange={(values) =>
+                  setFormData({ ...formData, preco_atacado: Number(values.value) })
+                }
+                thousandSeparator="."
+                decimalSeparator=","
+                prefix="R$ "
+                decimalScale={2}
+                fixedDecimalScale
+                allowNegative={false}
+              />
             </FormControl>
           </ModalBody>
 
@@ -462,7 +571,12 @@ const CreateProductModal = ({ isOpen, onClose, onCreate, categorias }: {
 };
 
 // Componente de Modal para Detalhes do Produto
-const ProductDetailModal = ({ product, categorias, onClose, onAddStock }: any) => {
+const ProductDetailModal = ({
+  product,
+  categorias,
+  onClose,
+  onAddStock,
+}: any) => {
   const [quantityToAdd, setQuantityToAdd] = useState(0);
 
   if (!product) return null;
@@ -471,7 +585,7 @@ const ProductDetailModal = ({ product, categorias, onClose, onAddStock }: any) =
     e.preventDefault();
     if (quantityToAdd > 0) {
       onAddStock(product.id, quantityToAdd);
-      setQuantityToAdd(0);  // Limpa o input após a adição
+      setQuantityToAdd(0); // Limpa o input após a adição
     }
   };
 
@@ -482,10 +596,15 @@ const ProductDetailModal = ({ product, categorias, onClose, onAddStock }: any) =
         <ModalHeader>{product.nome}</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-        <SimpleGrid columns={2} spacing={4}>
+          <SimpleGrid columns={2} spacing={4}>
             <Box>
               <Text fontWeight="semibold">Categoria:</Text>
-              <Text>{categorias.find((cat: any) => cat.id === product.categoria_id)?.nome}</Text>
+              <Text>
+                {
+                  categorias.find((cat: any) => cat.id === product.categoria_id)
+                    ?.nome
+                }
+              </Text>
             </Box>
 
             <Box>
@@ -493,8 +612,11 @@ const ProductDetailModal = ({ product, categorias, onClose, onAddStock }: any) =
               <Tag
                 size="lg"
                 colorScheme={
-                  product.quantidade_estoque === 0 ? 'red' :
-                  product.quantidade_estoque < 10 ? 'orange' : 'green'
+                  product.quantidade_estoque === 0
+                    ? "red"
+                    : product.quantidade_estoque < 10
+                    ? "orange"
+                    : "green"
                 }
               >
                 {product.quantidade_estoque} unidades
@@ -514,9 +636,9 @@ const ProductDetailModal = ({ product, categorias, onClose, onAddStock }: any) =
             <Box>
               <Text fontWeight="semibold">Preço Atacado:</Text>
               <Text>
-                {product.preco_atacado 
-                  ? `R$ ${product.preco_atacado.toFixed(2)}` 
-                  : 'Não aplicável'}
+                {product.preco_atacado
+                  ? `R$ ${product.preco_atacado.toFixed(2)}`
+                  : "Não aplicável"}
               </Text>
             </Box>
           </SimpleGrid>
@@ -551,6 +673,5 @@ const ProductDetailModal = ({ product, categorias, onClose, onAddStock }: any) =
     </Modal>
   );
 };
-
 
 export default ProductsPage;
