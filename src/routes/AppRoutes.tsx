@@ -8,6 +8,7 @@ import Reports from '../pages/Reports';
 import Charts from '../pages/Charts';
 import PDV from '../pages/PDV';
 // import Users from '../pages/Users';
+import DailySalesClosing from '../pages/DailySalesClosing';
 import MainLayout from '../layout/MainLayout';
 import UsersAdmins from '../pages/UsersAdmins';
 import UsersVendedores from '../pages/UsersVendedores';
@@ -30,6 +31,7 @@ export default function AppRoutes() {
         <Route path="/relatorios" element={<Reports />} />
         <Route path="/graficos" element={<Charts />} />
         <Route path="/pdv" element={<PDV />} />
+        <Route path="/fechamento" element={<DailySalesClosing />} />
         {/* <Route path="/usuarios/admins" element={<Users />} />
         <Route path="/usuarios/vendedores" element={<Users />} /> */}
         <Route path="*" element={<NotFound />} />

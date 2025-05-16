@@ -22,10 +22,12 @@ import {
   Input,
   RadioGroup,
   Radio,
+  IconButton,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import api from "../lib/api";
 import React from "react";
+import { DeleteIcon } from "@chakra-ui/icons";
 
 export interface Produto {
   id: number;
@@ -60,7 +62,7 @@ export interface clienteInput {
   email: string | null;
   telefone: string;
   endereco: string;
-  preferencias: Record<string, any>;
+  preferencias: Record<string, string>;
   observacoes: string;
 }
 
@@ -79,20 +81,25 @@ export interface VendaPayload {
   installments: number;
 }
 
+export interface Categorias {
+  id: number;
+  nome: string;
+}
+
 export default function PDV() {
   const toast = useToast();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clienteId, setClienteId] = useState("");
   const [loadingClientes, setLoadingClientes] = useState(false);
 
-  const [categorias, setCategorias] = useState([]);
+  const [categorias, setCategorias] = useState<Categorias[]>([]);
   const [parcelas, setParcelas] = useState(1);
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState("");
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<number | null>(null);
   const [produtos, setProdutos] = useState<
     {
       id: number;
       nome: string;
-      codigo:string;
+      codigo: string;
       quantidade_estoque: number;
       preco_atacado?: number;
       preco_venda?: number;
@@ -101,7 +108,7 @@ export default function PDV() {
 
   const [carrinho, setCarrinho] = useState<
     {
-      promocoes: any;
+      promocoes: Promocao[];
       id: number;
       nome: string;
       quantidade: number;
@@ -110,9 +117,7 @@ export default function PDV() {
     }[]
   >([]);
   const [loadingVenda, setLoadingVenda] = useState(false);
-  const [modoPrecoGlobal, setModoPrecoGlobal] = useState<"varejo" | "atacado">(
-    "varejo"
-  );
+  const [modoPrecoGlobal, setModoPrecoGlobal] = useState<"varejo" | "atacado">("varejo");
   const [tipo_compra, setTipoCompra] = useState<"à vista" | "à prazo">(
     "à vista"
   );
@@ -164,25 +169,29 @@ export default function PDV() {
     modo: "varejo" | "atacado",
     quantidade: number
   ) => {
+    // Verifica se pode usar preço atacado
     const podeUsarAtacado =
-      modo === "atacado" && quantidade >= 5 && produto.preco_atacado;
+      modo === "atacado" &&
+      quantidade >= 5 &&
+      produto.preco_atacado !== undefined;
+
     const precoBase = podeUsarAtacado
       ? produto.preco_atacado
       : produto.preco_venda;
 
     if (!precoBase) return 0;
 
+    // Aplica promoções se existirem
     const desconto =
       produto.promocoes?.find((p) => p.tipo === "desconto")?.valor || 0;
     return precoBase - desconto;
   };
-
   const addCliente = async (cliente: {
     nome: string;
     email: string | null;
     telefone: string;
     endereco: string;
-    preferencias: Record<string, any>;
+    preferencias: Record<string, string>;
     observacoes: string;
   }) => {
     try {
@@ -212,7 +221,7 @@ export default function PDV() {
     };
 
     fetchClientes();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     const fetchCategorias = async () => {
@@ -225,11 +234,12 @@ export default function PDV() {
     };
 
     fetchCategorias();
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     const fetchProdutos = async () => {
       if (value === "2" && !categoriaSelecionada) return;
+      setModoPrecoGlobal("varejo");
 
       try {
         const endpoint =
@@ -245,7 +255,7 @@ export default function PDV() {
     };
 
     fetchProdutos();
-  }, [categoriaSelecionada, value]); // Removed carrinho from dependencies
+  }, [categoriaSelecionada, toast, value]); // Removed carrinho from dependencies
 
   const adicionarAoCarrinho = (produto: Produto) => {
     setCarrinho((prev) => {
@@ -314,24 +324,25 @@ export default function PDV() {
   };
 
   const alterarModoPrecoItem = (id: number, novoModo: "varejo" | "atacado") => {
-    setModoPrecoGlobal(novoModo);
     setCarrinho((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
 
-        // Verifica se pode mudar para atacado
-        const modoFinal =
-          novoModo === "atacado" && item.quantidade < 5 ? "varejo" : novoModo;
+        // Encontra o produto original para obter os preços corretos
+        const produtoOriginal = produtos.find((p) => p.id === id);
+
+        if (!produtoOriginal) return item;
+
+        // Verifica se pode usar atacado (quantidade >= 5 e tem preço_atacado)
+        const podeUsarAtacado =
+          novoModo === "atacado" &&
+          item.quantidade >= 5 &&
+          produtoOriginal.preco_atacado !== undefined;
+
+        const modoFinal = podeUsarAtacado ? "atacado" : "varejo";
+
         const precoFinal = calcularPreco(
-          {
-            id: item.id,
-            nome: item.nome,
-            codigo: "",
-            quantidade_estoque: 0, // Default value or fetch the actual value if available
-            preco_atacado: undefined,
-            preco_venda: item.preco,
-            promocoes: [],
-          },
+          produtoOriginal,
           modoFinal,
           item.quantidade
         );
@@ -345,11 +356,51 @@ export default function PDV() {
     );
   };
 
+  const salvarCarrinho = async () => {
+    console.log(clienteId)
+    if (carrinho.length === 0) {
+      toast({
+        title: "Carrinho vazio",
+        description: "Adicione itens ao carrinho antes de salvar",
+        status: "warning",
+      });
+      return;
+    }
+
+    try {
+      const response = await api.post("/cart", {
+        itens: carrinho.map((item) => ({
+          produto_id: item.id,
+          quantidade: item.quantidade,
+          preco_unitario: item.preco,
+          modo: item.modoPreco,
+          
+        })),
+        cliente_id: clienteId, 
+        total: totalCarrinho,
+      });
+
+      console.log("Carrinho salvo com sucesso:", response.data);
+
+      toast({
+        title: "Carrinho salvo com sucesso",
+        status: "success",
+      });
+    } catch (error) {
+      console.error("Erro ao salvar carrinho:", error);
+      toast({
+        title: "Erro ao salvar carrinho",
+        status: "error",
+      });
+    }
+  };
+
   const removerDoCarrinho = (id: number) => {
     setCarrinho((prev) => prev.filter((p) => p.id !== id));
   };
 
   const finalizarVenda = async () => {
+  
     if (!clienteId || carrinho.length === 0) {
       toast({
         title: "Selecione um cliente e adicione produtos",
@@ -387,16 +438,16 @@ export default function PDV() {
         produtos: produtosPayload,
         payment_method: paymentMethodMap[forma_pagamento],
         payment_type: paymentTypeMap[tipo_compra],
-        installments:  parcelas
+        installments: parcelas,
       });
 
       toast({ title: "Venda finalizada com sucesso", status: "success" });
       setCarrinho([]);
       setClienteId("");
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       toast({
-        title: err.message || "Erro ao finalizar venda",
+        title: "Erro ao finalizar venda",
         status: "error",
       });
     } finally {
@@ -406,8 +457,10 @@ export default function PDV() {
 
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredProducts = produtos.filter((prod) =>
-    prod.nome.toLowerCase().includes(searchTerm.toLowerCase()) || prod.codigo.includes(searchTerm)
+  const filteredProducts = produtos.filter(
+    (prod) =>
+      prod.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      prod.codigo.includes(searchTerm)
   );
 
   if (loadingClientes) {
@@ -483,11 +536,14 @@ export default function PDV() {
               <Select
                 placeholder="Selecionar cliente"
                 value={clienteId}
-                onChange={(e) => setClienteId(e.target.value)}
+                onChange={(e) => {
+                  setClienteId(e.target.value)                  
+                }}
+
                 isDisabled={loadingClientes}
                 mb={4}
               >
-                {clientes.map((c: any) => (
+                {clientes.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.nome}
                   </option>
@@ -555,13 +611,11 @@ export default function PDV() {
                             e.target.value as "varejo" | "atacado"
                           )
                         }
-                        disabled={
-                          item.quantidade < 5 && item.modoPreco === "varejo"
-                        }
+                        disabled={item.quantidade < 5}
                       >
                         <option value="varejo">Varejo</option>
                         <option value="atacado" disabled={item.quantidade < 5}>
-                          Atacado
+                          Atacado {item.quantidade < 5 && "(mín. 5 un.)"}
                         </option>
                       </Select>
                     </Td>
@@ -570,13 +624,13 @@ export default function PDV() {
                       R${(item.preco * item.quantidade).toFixed(2)}
                     </Td>
                     <Td>
-                      <Button
+                      <IconButton
                         size="xs"
                         colorScheme="red"
+                        icon={<DeleteIcon />}
                         onClick={() => removerDoCarrinho(item.id)}
-                      >
-                        🗑️
-                      </Button>
+                        aria-label="Remover item"
+                      />
                     </Td>
                   </Tr>
                 ))}
@@ -647,18 +701,31 @@ export default function PDV() {
             )}
           </Flex>
 
-          <VStack align="start" mt={6}>
-            {!loadingVenda && (
+          <VStack align="center" mt={6} >
+            <Flex width="100%" gap={2} justifyContent={"space-between"} >
+
+              <Button
+                colorScheme="teal"
+                onClick={salvarCarrinho}
+                size="lg"
+                width="100%"
+                isDisabled={carrinho.length === 0}
+              >
+                Salvar Carrinho
+              </Button>
+
               <Button
                 colorScheme="blue"
                 onClick={finalizarVenda}
-                // isLoading={}
+                isLoading={loadingVenda}
                 size="lg"
                 width="100%"
+                isDisabled={carrinho.length === 0 || !clienteId}
               >
                 Finalizar Venda
               </Button>
-            )}
+
+            </Flex>
           </VStack>
         </Box>
 
@@ -703,7 +770,7 @@ export default function PDV() {
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {filteredProducts.map((prod: any) => (
+                      {filteredProducts.map((prod) => (
                         <Tr key={prod.id} _hover={{ bg: "gray.100" }}>
                           <Td fontSize="xs">{prod.nome}</Td>
                           <Td isNumeric>{prod.quantidade_estoque}</Td>
@@ -730,7 +797,7 @@ export default function PDV() {
                 Categorias
               </Heading>
               <Flex wrap="wrap" gap={2} mb={4}>
-                {categorias.map((cat: any) => (
+                {categorias.map((cat: Categorias) => (
                   <Button
                     key={cat.id}
                     onClick={() => setCategoriaSelecionada(cat.id)}
@@ -775,7 +842,7 @@ export default function PDV() {
                           </Tr>
                         </Thead>
                         <Tbody>
-                          {filteredProducts.map((prod: any) => (
+                          {filteredProducts.map((prod: Produto) => (
                             <Tr key={prod.id} _hover={{ bg: "gray.100" }}>
                               <Td fontSize={"xs"}>{prod.nome}</Td>
                               <Td isNumeric>{prod.quantidade_estoque}</Td>
