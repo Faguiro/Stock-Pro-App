@@ -25,6 +25,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import api from '../lib/api';
+import SalesReport from '../components/SalesReport';
 
 interface SaleProduct {
   produto_id: number;
@@ -35,6 +36,10 @@ interface SaleProduct {
 
 interface Sale {
   id: number;
+  cliente: {
+    id: number;
+    nome: string;
+  };
   cliente_id: number;
   vendedor_id: number;
   data: string;
@@ -59,6 +64,8 @@ const DailySalesClosing: React.FC = () => {
         setLoading(true);
         const response = await api.get('/sales');
         const today = new Date().toISOString().split('T')[0];
+
+        console.log(response.data);
         
         // Filtrar vendas do dia atual
         const todaySales = response.data.filter((sale: Sale) => {
@@ -76,6 +83,10 @@ const DailySalesClosing: React.FC = () => {
 
     fetchTodaySales();
   }, []);
+
+
+
+
 
   const handleCloseDay = async () => {
     try {
@@ -242,7 +253,9 @@ const DailySalesClosing: React.FC = () => {
                 <Tr key={sale.id}>
                   <Td>{sale.id}</Td>
                   <Td>{formatDate(sale.data)}</Td>
-                  <Td>#{sale.cliente_id}</Td>
+
+
+                  <Td>{sale.cliente.nome}</Td>
                   <Td>
                     {new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
@@ -283,6 +296,7 @@ const DailySalesClosing: React.FC = () => {
           Fechar Caixa do Dia
         </Button>
       </Box>
+      <SalesReport />
     </Box>
   );
 };
