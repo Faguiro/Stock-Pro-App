@@ -1,4 +1,3 @@
-"use client";
 import api from "../lib/api";
 import {
   Box,
@@ -37,6 +36,7 @@ import {
 import { NumericFormat } from "react-number-format";
 import { FaList, FaTh } from "react-icons/fa";
 import { useEffect, useState } from "react";
+import type { Categorias } from "./PDV";
 
 interface Product {
   id: number;
@@ -59,13 +59,18 @@ interface Promotion {
 const ProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { 
+    isOpen: isEditOpen, 
+    onOpen: onEditOpen, 
+    onClose: onEditClose 
+  } = useDisclosure();
   const [searchTerm, setSearchTerm] = useState("");
-  const [categorias, setCategorias] = useState<any[]>([]);
+  const [categorias, setCategorias] = useState<Categorias[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  // const [codigo, setCodigo] = useState<string>("")
 
   const toast = useToast();
 
@@ -80,9 +85,9 @@ const ProductsPage = () => {
 
         setCategorias(categoriesRes.data);
 
-        const productsWithStock = productsRes.data.map((product: any) => {
+        const productsWithStock = productsRes.data.map((product: Product) => {
           const stockItem = stockRes.data.find(
-            (s: any) => s.product_id === product.id
+            (s: { product_id: number }) => s.product_id === product.id
           );
           return {
             ...product,
@@ -125,6 +130,32 @@ const ProductsPage = () => {
     }
   };
 
+  const handleUpdateProduct = async (updatedProduct: Product) => {
+    try {
+      const response = await api.put(`/products/${updatedProduct.id}`, updatedProduct);
+      if (response.status >= 200 && response.status < 300) {
+        setProducts(products.map(p => 
+          p.id === updatedProduct.id ? updatedProduct : p
+        ));
+        onEditClose();
+        toast({
+          title: "Produto atualizado",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Erro ao atualizar produto",
+        description: (error as Error).message,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
   const handleDeleteProduct = async (productId: number) => {
     try {
       await api.delete(`/products/${productId}`);
@@ -150,7 +181,6 @@ const ProductsPage = () => {
     try {
       await api.put(`/stock/${productId}`, { quantity: quantityToAdd });
 
-      // Atualiza o estado local após a adição
       setProducts((prev) =>
         prev.map((p) =>
           p.id === productId
@@ -174,6 +204,11 @@ const ProductsPage = () => {
         isClosable: true,
       });
     }
+  };
+
+  const handleEditClick = (product: Product) => {
+    setProductToEdit(product);
+    onEditOpen();
   };
 
   const filteredProducts = products.filter(
@@ -248,6 +283,7 @@ const ProductsPage = () => {
               categorias={categorias}
               onSelect={setSelectedProduct}
               onDelete={handleDeleteProduct}
+              onEdit={handleEditClick}
             />
           ))}
         </SimpleGrid>
@@ -260,6 +296,7 @@ const ProductsPage = () => {
               categorias={categorias}
               onSelect={setSelectedProduct}
               onDelete={handleDeleteProduct}
+              onEdit={handleEditClick}
             />
           ))}
         </List>
@@ -272,11 +309,20 @@ const ProductsPage = () => {
         categorias={categorias}
       />
 
+      <EditProductModal
+        isOpen={isEditOpen}
+        onClose={onEditClose}
+        onUpdate={handleUpdateProduct}
+        product={productToEdit}
+        categorias={categorias}
+      />
+
       <ProductDetailModal
         product={selectedProduct}
         categorias={categorias}
         onClose={() => setSelectedProduct(null)}
         onAddStock={handleAddStock}
+        onEdit={handleEditClick}
       />
     </Box>
   );
@@ -288,11 +334,13 @@ const ProductCard = ({
   categorias,
   onSelect,
   onDelete,
+  onEdit,
 }: {
   product: Product;
-  categorias: any[];
+  categorias: Categorias[];
   onSelect: (product: Product) => void;
   onDelete: (id: number) => void;
+  onEdit: (product: Product) => void;
 }) => (
   <Card
     boxShadow="md"
@@ -341,6 +389,14 @@ const ProductCard = ({
         Detalhes
       </Button>
       <Button
+        colorScheme="blue"
+        variant="ghost"
+        onClick={() => onEdit(product)}
+        mr={2}
+      >
+        Editar
+      </Button>
+      <Button
         colorScheme="red"
         variant="ghost"
         onClick={() => onDelete(product.id)}
@@ -357,11 +413,13 @@ const ProductListItem = ({
   categorias,
   onSelect,
   onDelete,
+  onEdit,
 }: {
   product: Product;
-  categorias: any[];
+  categorias: Categorias[];
   onSelect: (product: Product) => void;
   onDelete: (id: number) => void;
+  onEdit: (product: Product) => void;
 }) => (
   <ListItem
     p={4}
@@ -415,6 +473,14 @@ const ProductListItem = ({
       </Button>
       <Button
         size="sm"
+        colorScheme="blue"
+        variant="ghost"
+        onClick={() => onEdit(product)}
+      >
+        Editar
+      </Button>
+      <Button
+        size="sm"
         colorScheme="red"
         variant="ghost"
         onClick={() => onDelete(product.id)}
@@ -435,7 +501,7 @@ export const CreateProductModal = ({
   isOpen: boolean;
   onClose: () => void;
   onCreate: (product: Omit<Product, "id">) => void;
-  categorias: any[];
+  categorias: Categorias[];
 }) => {
   const [formData, setFormData] = useState({
     nome: "",
@@ -489,7 +555,7 @@ export const CreateProductModal = ({
                   setFormData({ ...formData, categoria_id: +e.target.value })
                 }
               >
-                {categorias.map((cat: any) => (
+                {categorias.map((cat: Categorias) => (
                   <option key={cat.id} value={cat.id}>
                     {cat.nome}
                   </option>
@@ -500,7 +566,6 @@ export const CreateProductModal = ({
             <SimpleGrid columns={2} spacing={4}>
               <FormControl isRequired>
                 <FormLabel>Preço de Compra</FormLabel>
-
                 <NumericFormat
                   customInput={Input}
                   value={formData.preco_compra}
@@ -570,13 +635,170 @@ export const CreateProductModal = ({
   );
 };
 
+// Componente de Modal para Editar Produto
+const EditProductModal = ({
+  isOpen,
+  onClose,
+  onUpdate,
+  product,
+  categorias,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdate: (product: Product) => void;
+  product: Product | null;
+  categorias: Categorias[];
+}) => {
+  const [formData, setFormData] = useState<Product | null>(null);
+
+  useEffect(() => {
+    if (product) {
+      setFormData({
+        ...product,
+        preco_atacado: product.preco_atacado || undefined,
+      });
+    }
+  }, [product]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (formData) {
+      onUpdate(formData);
+    }
+  };
+
+  if (!product || !formData) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>Editar Produto</ModalHeader>
+        <ModalCloseButton />
+        <form onSubmit={handleSubmit}>
+          <ModalBody>
+            <FormControl isRequired mb={4}>
+              <FormLabel>Nome do Produto</FormLabel>
+              <Input
+                value={formData.nome}
+                onChange={(e) =>
+                  setFormData({ ...formData, nome: e.target.value })
+                }
+              />
+            </FormControl>
+
+            <FormControl mb={4}>
+              <FormLabel>Código de barras</FormLabel>
+              <Input
+                value={formData.codigo}
+                onChange={(e) =>
+                  setFormData({ ...formData, codigo: e.target.value })
+                }
+              />
+            </FormControl>
+
+            <FormControl isRequired mb={4}>
+              <FormLabel>Categoria</FormLabel>
+              <Select
+                value={formData.categoria_id}
+                onChange={(e) =>
+                  setFormData({ ...formData, categoria_id: +e.target.value })
+                }
+              >
+                {categorias.map((cat: Categorias) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nome}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+
+            <SimpleGrid columns={2} spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Preço de Compra</FormLabel>
+                <NumericFormat
+                  customInput={Input}
+                  value={formData.preco_compra}
+                  onValueChange={(values) =>
+                    setFormData({
+                      ...formData,
+                      preco_compra: Number(values.value),
+                    })
+                  }
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  prefix="R$ "
+                  decimalScale={2}
+                  fixedDecimalScale
+                  allowNegative={false}
+                />
+              </FormControl>
+
+              <FormControl isRequired>
+                <FormLabel>Preço de Venda</FormLabel>
+                <NumericFormat
+                  customInput={Input}
+                  value={formData.preco_venda}
+                  onValueChange={(values) =>
+                    setFormData({
+                      ...formData,
+                      preco_venda: Number(values.value), 
+                    })
+                  }
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  prefix="R$ "
+                  decimalScale={2}
+                  fixedDecimalScale
+                  allowNegative={false}
+                />
+              </FormControl>
+            </SimpleGrid>
+
+            <FormControl mt={4}>
+              <FormLabel>Preço Atacado</FormLabel>
+              <NumericFormat
+                customInput={Input}
+                value={formData.preco_atacado || ""}
+                onValueChange={(values) =>
+                  setFormData({ ...formData, preco_atacado: Number(values.value) })
+                }
+                thousandSeparator="."
+                decimalSeparator=","
+                prefix="R$ "
+                decimalScale={2}
+                fixedDecimalScale
+                allowNegative={false}
+              />
+            </FormControl>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button type="submit" colorScheme="blue" mr={3}>
+              Salvar Alterações
+            </Button>
+            <Button onClick={onClose}>Cancelar</Button>
+          </ModalFooter>
+        </form>
+      </ModalContent>
+    </Modal>
+  );
+};
+
 // Componente de Modal para Detalhes do Produto
 const ProductDetailModal = ({
   product,
   categorias,
   onClose,
   onAddStock,
-}: any) => {
+  onEdit,
+}: {
+  product: Product | null;
+  categorias: Categorias[];
+  onClose: () => void;
+  onAddStock: (productId: number, quantityToAdd: number) => void;
+  onEdit: (product: Product) => void;
+}) => {
   const [quantityToAdd, setQuantityToAdd] = useState(0);
 
   if (!product) return null;
@@ -585,7 +807,7 @@ const ProductDetailModal = ({
     e.preventDefault();
     if (quantityToAdd > 0) {
       onAddStock(product.id, quantityToAdd);
-      setQuantityToAdd(0); // Limpa o input após a adição
+      setQuantityToAdd(0);
     }
   };
 
@@ -601,7 +823,7 @@ const ProductDetailModal = ({
               <Text fontWeight="semibold">Categoria:</Text>
               <Text>
                 {
-                  categorias.find((cat: any) => cat.id === product.categoria_id)
+                  categorias.find((cat: Categorias) => cat.id === product.categoria_id)
                     ?.nome
                 }
               </Text>
@@ -667,6 +889,16 @@ const ProductDetailModal = ({
           </Box>
         </ModalBody>
         <ModalFooter>
+          <Button 
+            colorScheme="blue" 
+            mr={3}
+            onClick={() => {
+              onEdit(product);
+              onClose();
+            }}
+          >
+            Editar
+          </Button>
           <Button onClick={onClose}>Fechar</Button>
         </ModalFooter>
       </ModalContent>
