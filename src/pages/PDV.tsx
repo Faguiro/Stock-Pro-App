@@ -23,11 +23,26 @@ import {
   RadioGroup,
   Radio,
   IconButton,
+  Spinner,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+  Grid,
+  HStack,
+  Tfoot,
+  Checkbox,
 } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import api from "../lib/api";
 import React from "react";
 import { DeleteIcon } from "@chakra-ui/icons";
+import { NumericFormat } from "react-number-format";
+import { FaShoppingCart } from "react-icons/fa";
 
 export interface Produto {
   id: number;
@@ -57,6 +72,7 @@ export interface Promocao {
   tipo: string;
   valor: number;
 }
+
 export interface clienteInput {
   nome: string;
   email: string | null;
@@ -91,10 +107,13 @@ export default function PDV() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clienteId, setClienteId] = useState("");
   const [loadingClientes, setLoadingClientes] = useState(false);
+  const [isDesconto, setIsDesconto] = useState(false);
 
   const [categorias, setCategorias] = useState<Categorias[]>([]);
   const [parcelas, setParcelas] = useState(1);
-  const [categoriaSelecionada, setCategoriaSelecionada] = useState<number | null>(null);
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState<
+    number | null
+  >(null);
   const [produtos, setProdutos] = useState<
     {
       id: number;
@@ -117,7 +136,9 @@ export default function PDV() {
     }[]
   >([]);
   const [loadingVenda, setLoadingVenda] = useState(false);
-  const [modoPrecoGlobal, setModoPrecoGlobal] = useState<"varejo" | "atacado">("varejo");
+  const [modoPrecoGlobal, setModoPrecoGlobal] = useState<"varejo" | "atacado">(
+    "varejo"
+  );
   const [tipo_compra, setTipoCompra] = useState<"à vista" | "à prazo">(
     "à vista"
   );
@@ -127,6 +148,7 @@ export default function PDV() {
 
   const [modoCliente, setModoCliente] = useState<boolean>(false);
   const [value, setValue] = React.useState("1");
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const [novoCliente, setNovoCliente] = useState<clienteInput>({
     nome: "",
@@ -137,6 +159,23 @@ export default function PDV() {
     observacoes: "",
   });
   const [novoClienteLoading, setNovoClienteLoading] = useState(false);
+  interface CarrinhoItem {
+    id: number;
+    produto: Produto;
+    quantidade: number;
+    preco_unitario: number;
+    modo: string;
+    cliente: string;
+  }
+
+  interface Carrinho {
+    id: number;
+    data_criacao: string;
+    cliente_id: number;
+    itens: CarrinhoItem[];
+  }
+
+  const [carrinhos, setCarrinhos] = useState<Carrinho[]>([]);
 
   useEffect(() => {
     setValue("1");
@@ -172,7 +211,7 @@ export default function PDV() {
     // Verifica se pode usar preço atacado
     const podeUsarAtacado =
       modo === "atacado" &&
-      quantidade >= 5 &&
+      quantidade >= 1 &&
       produto.preco_atacado !== undefined;
 
     const precoBase = podeUsarAtacado
@@ -333,10 +372,10 @@ export default function PDV() {
 
         if (!produtoOriginal) return item;
 
-        // Verifica se pode usar atacado (quantidade >= 5 e tem preço_atacado)
+        // Verifica se pode usar atacado (quantidade >=1 e tem preço_atacado)
         const podeUsarAtacado =
           novoModo === "atacado" &&
-          item.quantidade >= 5 &&
+          item.quantidade >= 1 &&
           produtoOriginal.preco_atacado !== undefined;
 
         const modoFinal = podeUsarAtacado ? "atacado" : "varejo";
@@ -357,7 +396,7 @@ export default function PDV() {
   };
 
   const salvarCarrinho = async () => {
-    console.log(clienteId)
+    console.log(clienteId);
     if (carrinho.length === 0) {
       toast({
         title: "Carrinho vazio",
@@ -374,9 +413,8 @@ export default function PDV() {
           quantidade: item.quantidade,
           preco_unitario: item.preco,
           modo: item.modoPreco,
-          
         })),
-        cliente_id: clienteId, 
+        cliente_id: clienteId,
         total: totalCarrinho,
       });
 
@@ -399,8 +437,11 @@ export default function PDV() {
     setCarrinho((prev) => prev.filter((p) => p.id !== id));
   };
 
+ const changeDiscount = () => {
+     setIsDesconto(!isDesconto);
+  };
+
   const finalizarVenda = async () => {
-  
     if (!clienteId || carrinho.length === 0) {
       toast({
         title: "Selecione um cliente e adicione produtos",
@@ -463,104 +504,228 @@ export default function PDV() {
       prod.codigo.includes(searchTerm)
   );
 
+
+  
+
+  useEffect(() => {
+    const fetchCarrinhos = async () => {
+      try {
+        const res = await api.get("/cart/carts");
+        setCarrinhos(res.data);
+
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    setIsDesconto(false);
+    fetchCarrinhos();
+  }, []);
+
   if (loadingClientes) {
     return (
       <Box p={6}>
-        <Heading mb={6}>Ponto de Venda</Heading>
-        <Text>Carregando clientes...</Text>
+        <Heading mb={6} textAlign={"center"}>
+          <Text>Ponto de Venda</Text>
+        </Heading>
+        <Spinner size="xl" />
       </Box>
     );
   }
 
   return (
     <Box p={6} ml={[0, 0, 0]}>
-      <Heading mb={6}>Ponto de Venda</Heading>
 
-      <Flex direction={["column", "row"]} gap={4}>
+
+      <Modal isOpen={isOpen} onClose={onClose} size={"6xl"}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Detalhes do Carrinho</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {carrinhos &&
+              carrinhos.map((carrinho) => {
+
+              const nome_cliente = clientes[carrinho.cliente_id]
+                ? clientes[carrinho.cliente_id].nome
+                : "Desconhecido";
+
+                console.log(nome_cliente)
+                // Função para retornar todos os itens do carrinho
+                const getCarrinhoItens = () => carrinho.itens;
+
+                return (
+                  <Box
+                    key={carrinho.id}
+                    m={3}
+                    p={3}
+                    backgroundColor={"gray.100"}
+                    borderRadius={"md"}
+                  >
+                    <Flex
+                      justifyContent="space-between"
+                      alignItems="center"
+                      mb={4}
+                    >
+                      <Heading fontSize="xl">Carrinho #{carrinho.id}</Heading>
+                      <Text fontSize="sm" color="gray.500">
+                        Criado em:{" "}
+                        {new Date(carrinho.data_criacao).toLocaleString()}
+                      </Text>
+                      <Text fontSize="sm" color="gray.500" mr={2}>
+                        Cliente: {nome_cliente}
+                      </Text>
+                      <Checkbox
+                        size="sm"
+                        isChecked={isDesconto}
+                        mr={2}
+                        colorScheme="blue"
+                        onChange={() => {
+                         changeDiscount()
+                        }}
+                      >
+                        Desconto
+                      </Checkbox>
+                    </Flex>
+
+                    <TableContainer>
+                      <Table variant="striped" colorScheme="gray">
+                        <Thead>
+                          <Tr>
+                            <Th>Produto</Th>
+                            <Th>Modo</Th>
+                            <Th>Cliente</Th>
+                            <Th isNumeric>Quantidade</Th>
+                            <Th isNumeric>Preço Unitário</Th>
+                            <Th isNumeric>Total</Th>
+                            <Th>Ações</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {carrinho.itens.map((item) => {
+                            // Função para retornar dados do produto
+                            const getProdutoData = () => ({
+                              id: item.produto.id,
+                              nome: item.produto.nome,
+                              preco: item.preco_unitario,
+                              modo: item.modo,
+                              quantidade: item.quantidade,
+                            });
+
+                            return (
+                              <Tr key={item.id}>
+                                <Td>{item.produto.nome}</Td>
+                                <Td>{item.modo}</Td>
+                                <Td>{item.cliente}</Td>
+                                <Td isNumeric>{item.quantidade}</Td>
+                                <Td isNumeric>
+                                  R$ {item.preco_unitario.toFixed(2)}
+                                </Td>
+                                <Td isNumeric>
+                                  R${" "}
+                                  {(
+                                    item.quantidade * item.preco_unitario
+                                  ).toFixed(2)}
+                                </Td>
+                                <Td>
+                                  <Button
+                                    size="sm"
+                                    colorScheme="blue"
+                                    onClick={() =>
+                                      console.log(getProdutoData())
+                                    }
+                                  >
+                                    Dados
+                                  </Button>
+                                </Td>
+                              </Tr>
+                            );
+                          })}
+                        </Tbody>
+                        <Tfoot>
+                          <Tr>
+                            <Th colSpan={5}></Th>
+                            <Th isNumeric>Total:</Th>
+                            <Th isNumeric>
+                              R${" "}
+                              {carrinho.itens
+                                .reduce(
+                                  (total, item) =>
+                                    total +
+                                    item.quantidade * item.preco_unitario,
+                                  0
+                                )
+                                .toFixed(2)}
+                            </Th>
+                            <Th>
+                              
+                               
+                              <Button
+                                size="sm"
+                                colorScheme="green"
+                                onClick={() => {
+                                  console.log(getCarrinhoItens());
+                                  for (const item of getCarrinhoItens()) {
+                                  
+                                  const desconto = ((item.produto?.preco_venda ?? 0) - item.preco_unitario)
+
+                                  console.log(desconto)
+
+                                    // Monta um Produto a partir do CarrinhoItem                                    
+                                    adicionarAoCarrinho({
+                                      id: item.produto.id,
+                                      nome: item.produto.nome,
+                                      codigo: item.produto.codigo,
+                                      quantidade_estoque: item.produto.quantidade_estoque,
+                                      preco_atacado: item.produto.preco_atacado,
+                                      preco_venda: item.produto.preco_venda,
+                                      promocoes:isDesconto ? [{tipo:"desconto", valor: desconto}]:[],
+                                    });
+                                  }
+                                  onClose();
+                                }}
+                              >
+                                Ver Itens
+                              </Button>
+                            </Th>
+                          </Tr>
+                        </Tfoot>
+                      </Table>
+                    </TableContainer>
+                  </Box>
+                );
+              })}
+          </ModalBody>
+
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={onClose}>
+              Fechar
+            </Button>
+            <Button variant="ghost">Exportar Dados</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+
+
+      <Flex gap={4} w={"100%"} h={"100%"}>
         {/* Lado esquerdo: Cliente + Carrinho */}
         <Box
-          flex="0 0 60%"
-          bg="gray.50"
+          bg="gray.200"
           p={4}
-          flexShrink={0}
+          flexShrink={1}
           borderRadius="md"
           boxShadow="sm"
           overflow="hidden"
+          border={"2px solid #ccc"}
+          w={"70%"}
         >
-          <Heading size="md" mb={4}>
-            Cliente
-          </Heading>
-
-          {modoCliente ? (
-            <Flex mb={4} gap={4} direction="row">
-              <Input
-                placeholder="Nome do cliente"
-                value={novoCliente.nome}
-                onChange={(e) =>
-                  setNovoCliente({ ...novoCliente, nome: e.target.value })
-                }
-              />
-
-              <Input
-                placeholder="Email do cliente"
-                value={novoCliente.email || ""}
-                onChange={(e) => {
-                  if (
-                    e.target.value.length < 1 ||
-                    !e.target.value.includes("@")
-                  ) {
-                    setNovoCliente({ ...novoCliente, email: null });
-                  }
-                  if (e.target.value.includes("@"))
-                    setNovoCliente({ ...novoCliente, email: e.target.value });
-                }}
-              />
-
-              <Button
-                colorScheme="blue"
-                ml={1}
-                isDisabled={novoClienteLoading}
-                isLoading={novoClienteLoading}
-                onClick={() => {
-                  setNovoClienteLoading(true);
-                  addCliente({ ...novoCliente });
-                  setModoCliente(false);
-                  setNovoClienteLoading(false);
-                }}
-              >
-                <Text px={2}>Salvar</Text>
-              </Button>
-            </Flex>
-          ) : (
-            <Flex mb={4} gap={4} direction="row">
-              <Select
-                placeholder="Selecionar cliente"
-                value={clienteId}
-                onChange={(e) => {
-                  setClienteId(e.target.value)                  
-                }}
-
-                isDisabled={loadingClientes}
-                mb={4}
-              >
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome}
-                  </option>
-                ))}
-              </Select>
-              <Button ml={1} onClick={() => setModoCliente(true)}>
-                Novo
-              </Button>
-            </Flex>
-          )}
-
-          <Heading size="md" mb={3}>
+          <Heading fontSize={"xl"} m={3} textAlign={"center"}>
             Carrinho
           </Heading>
+          <Divider my={3} />
 
           <TableContainer>
-            <Table size="sm">
+            <Table size="sm" variant="striped" colorScheme="white" mb={4}>
               <Thead>
                 <Tr>
                   <Th>Produto</Th>
@@ -575,7 +740,9 @@ export default function PDV() {
                 {carrinho.map((item, index) => (
                   <Tr key={index}>
                     <Td>
-                      <Text fontSize="xs">{item.nome}</Text>
+                      <Text fontSize="1rem" fontWeight="bold">
+                        {item.nome}
+                      </Text>
                       {item.promocoes?.length > 0 && (
                         <Text fontSize="xs" color="green.600">
                           Promoção: {item.promocoes[0].tipo} (-R$
@@ -638,10 +805,28 @@ export default function PDV() {
             </Table>
           </TableContainer>
 
-          <Stack direction="row" spacing={6} mt={4}>
+          <Stack direction="row-reverse" spacing={6} mt={4}>
             <Stat>
               <StatLabel>Total</StatLabel>
-              <StatNumber>R${totalCarrinho.toFixed(2)}</StatNumber>
+              <Text
+                fontSize={"2rem"}
+                fontWeight="bold"
+                color={"blue.800"}
+                border={"1px solid gray"}
+                background={"white"}
+                borderRadius={"md"}
+                textAlign={"center"}
+              >
+                <NumericFormat
+                  value={totalCarrinho}
+                  displayType={"text"}
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  prefix="R$ "
+                  decimalScale={2}
+                  fixedDecimalScale
+                />
+              </Text>
             </Stat>
             <Stat>
               <StatLabel>Itens</StatLabel>
@@ -675,22 +860,28 @@ export default function PDV() {
             </Select>
 
             <Select
-              placeholder="Selecionar tipo de compra"
+              placeholder="Selecionar tipo de pagamento"
               mb={4}
               value={tipo_compra}
-              onChange={(e) =>
-                setTipoCompra(e.target.value as "à vista" | "à prazo")
-              }
+              fontSize={"1rem"}
+              fontWeight={"bold"}
+              onChange={(e) => {
+                setTipoCompra(e.target.value as "à vista" | "à prazo");
+                if (e.target.value === "à vista") {
+                  setParcelas(1);
+                }
+              }}
             >
               <option value="à vista">À Vista</option>
-              <option value="à prazo">À Prazo</option>
+              <option value="à prazo">Parcelado</option>
             </Select>
+
             {tipo_compra == "à prazo" ? (
               <Select
                 value={parcelas}
                 onChange={(e) => setParcelas(Number(e.target.value))}
               >
-                {[1, 2, 3, 4, 5, 6].map((num) => (
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
                   <option key={num} value={num}>
                     {num}x
                   </option>
@@ -701,9 +892,8 @@ export default function PDV() {
             )}
           </Flex>
 
-          <VStack align="center" mt={6} >
-            <Flex width="100%" gap={2} justifyContent={"space-between"} >
-
+          <VStack align="center" mt={6}>
+            <Flex width="100%" gap={2} justifyContent={"space-between"}>
               <Button
                 colorScheme="teal"
                 onClick={salvarCarrinho}
@@ -724,148 +914,249 @@ export default function PDV() {
               >
                 Finalizar Venda
               </Button>
-
             </Flex>
           </VStack>
         </Box>
+        {/* Lado esquerdo: Cliente + Carrinho */}
 
         {/* Lado direito: Categorias + Produtos */}
         <Box
-          flex="0 0 40%"
-          bg="gray.50"
-          flexShrink={0}
-          p={4}
+          flex="1"
           borderRadius="md"
           boxShadow="sm"
-          overflow="hidden"
+          h={"100%"}
+          // overflow="hidden"
+          // overflowY={"scroll"}
         >
-          <ModoBusca />
+          <Box
+            // flex="0 0 40%"
+            bg="gray.200"
+            p={6}
+            borderRadius="md"
+            boxShadow="sm"
+            border={"1px solid #ccc"}
+            // position={"static"}
+            // right={12}
+            // top={97}
+            // height={painelSpand ? "90vh" : "8vh"}
+            // width={painelSpand ? "25%" : "25%"}
+            // overflowY={"scroll"}
+            // onFocus={() => setPainelSpand(true)}
+          >
+            {modoCliente ? (
+              <Flex mb={4} gap={4} direction="row">
+                <Heading size="md" mb={4}>
+                  Cliente
+                </Heading>
 
-          {value === "1" && (
-            <>
-              <Divider my={4} />
-              <Heading size="sm" mb={2}>
-                Produtos
-              </Heading>
-              <Input
-                placeholder="Buscar produtos..."
-                value={searchTerm}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setSearchTerm(e.target.value)
-                }
-                mb={4}
-              />
-              {produtos.length === 0 ? (
-                <Text color="gray.900">
-                  Nenhum produto encontrado nesta categoria.
-                </Text>
-              ) : (
-                <TableContainer overflowY="auto" maxHeight="500px">
-                  <Table variant="simple" size="sm">
-                    <Thead position="sticky" top={0} bg="white" zIndex={1}>
-                      <Tr>
-                        <Th>Produto</Th>
-                        <Th isNumeric>Estoque</Th>
-                        <Th>Ação</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {filteredProducts.map((prod) => (
-                        <Tr key={prod.id} _hover={{ bg: "gray.100" }}>
-                          <Td fontSize="xs">{prod.nome}</Td>
-                          <Td isNumeric>{prod.quantidade_estoque}</Td>
-                          <Td>
-                            <Button
-                              size="xs"
-                              colorScheme="blue"
-                              onClick={() => adicionarAoCarrinho(prod)}
-                            >
-                              Adicionar
-                            </Button>
-                          </Td>
-                        </Tr>
-                      ))}
-                    </Tbody>
-                  </Table>
-                </TableContainer>
-              )}
-            </>
-          )}
-          {value === "2" && (
-            <>
-              <Heading size="md" mb={2}>
-                Categorias
-              </Heading>
-              <Flex wrap="wrap" gap={2} mb={4}>
-                {categorias.map((cat: Categorias) => (
-                  <Button
-                    key={cat.id}
-                    onClick={() => setCategoriaSelecionada(cat.id)}
-                    colorScheme={
-                      cat.id === categoriaSelecionada ? "blue" : "gray"
+                <Input
+                  placeholder="Nome do cliente"
+                  value={novoCliente.nome}
+                  onChange={(e) =>
+                    setNovoCliente({ ...novoCliente, nome: e.target.value })
+                  }
+                />
+
+                <Input
+                  placeholder="Email do cliente"
+                  value={novoCliente.email || ""}
+                  onChange={(e) => {
+                    if (
+                      e.target.value.length < 1 ||
+                      !e.target.value.includes("@")
+                    ) {
+                      setNovoCliente({ ...novoCliente, email: null });
                     }
-                    size="sm"
-                  >
-                    {cat.nome}
-                  </Button>
-                ))}
+                    if (e.target.value.includes("@"))
+                      setNovoCliente({ ...novoCliente, email: e.target.value });
+                  }}
+                />
+
+                <Button
+                  colorScheme="blue"
+                  ml={1}
+                  isDisabled={novoClienteLoading}
+                  isLoading={novoClienteLoading}
+                  onClick={() => {
+                    setNovoClienteLoading(true);
+                    addCliente({ ...novoCliente });
+                    setModoCliente(false);
+                    setNovoClienteLoading(false);
+                  }}
+                >
+                  <Text px={2}>Salvar</Text>
+                </Button>
               </Flex>
+            ) : (
+              <Flex mb={4} gap={4} direction="row">
+                <Select
+                  placeholder="Selecionar cliente"
+                  value={clienteId}
+                  onChange={(e) => {
+                    setClienteId(e.target.value);
+                  }}
+                  isDisabled={loadingClientes}
+                  mb={4}
+                >
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </Select>
+                <Button ml={1} onClick={() => setModoCliente(true)}>
+                  Novo
+                </Button>
+              </Flex>
+            )}
 
-              {categoriaSelecionada && (
-                <>
-                  <Divider my={4} />
-                  <Heading size="sm" mb={2}>
-                    Produtos
-                  </Heading>
-                  <Input
-                    placeholder="Buscar produtos..."
-                    value={searchTerm}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSearchTerm(e.target.value)
-                    }
-                    mb={4}
-                  />
-                  {produtos.length === 0 ? (
-                    <Text color="gray.900">
-                      Nenhum produto encontrado nesta categoria.
-                    </Text>
-                  ) : (
-                    <TableContainer>
-                      <Table variant="simple" size="sm">
-                        <Thead>
-                          <Tr>
-                            <Th>Produto</Th>
-                            {/* <Th isNumeric>Preço Atacado</Th>
-                                                <Th isNumeric>Preço Varejo</Th> */}
-                            <Th isNumeric>Estoque</Th>
-                            <Th>Ação</Th>
+            <ModoBusca />
+
+            {value === "1" && (
+              <>
+                <Divider my={4} />
+                <Heading size="sm" mb={2}>
+                  Produtos
+                </Heading>
+                <Input
+                  placeholder="Buscar produtos..."
+                  value={searchTerm}
+                  bg={"white"}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSearchTerm(e.target.value)
+                  }
+                  mb={4}
+                />
+                {produtos.length === 0 ? (
+                  <Text color="gray.900">
+                    Nenhum produto encontrado nesta categoria.
+                  </Text>
+                ) : (
+                  <TableContainer overflowY="auto" maxHeight="250px">
+                    <Table variant="simple" size="sm">
+                      <Thead position="sticky" top={0} bg="white" zIndex={1}>
+                        <Tr>
+                          <Th>Produto</Th>
+                          <Th isNumeric>Estoque</Th>
+                          <Th>Ação</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {filteredProducts.map((prod) => (
+                          <Tr key={prod.id} _hover={{ bg: "gray.100" }}>
+                            <Td fontSize="xs">{prod.nome}</Td>
+                            <Td isNumeric>{prod.quantidade_estoque}</Td>
+                            <Td>
+                              <Button
+                                size="xs"
+                                colorScheme="blue"
+                                onClick={() => adicionarAoCarrinho(prod)}
+                              >
+                                Adicionar
+                              </Button>
+                            </Td>
                           </Tr>
-                        </Thead>
-                        <Tbody>
-                          {filteredProducts.map((prod: Produto) => (
-                            <Tr key={prod.id} _hover={{ bg: "gray.100" }}>
-                              <Td fontSize={"xs"}>{prod.nome}</Td>
-                              <Td isNumeric>{prod.quantidade_estoque}</Td>
-                              <Td>
-                                <Button
-                                  size="xs"
-                                  colorScheme="blue"
-                                  onClick={() => adicionarAoCarrinho(prod)}
-                                >
-                                  Adicionar
-                                </Button>
-                              </Td>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </TableContainer>
+                )}
+              </>
+            )}
+
+            {value === "2" && (
+              <>
+                <Heading size="md" mb={2}>
+                  Categorias
+                </Heading>
+                <Flex wrap="wrap" gap={2} mb={4}>
+                  {categorias.map((cat: Categorias) => (
+                    <Button
+                      key={cat.id}
+                      onClick={() => setCategoriaSelecionada(cat.id)}
+                      colorScheme={
+                        cat.id === categoriaSelecionada ? "blue" : "gray"
+                      }
+                      size="sm"
+                    >
+                      {cat.nome}
+                    </Button>
+                  ))}
+                </Flex>
+
+                {categoriaSelecionada && (
+                  <>
+                    <Divider my={4} />
+                    <Heading size="sm" mb={2}>
+                      Produtos
+                    </Heading>
+                    <Input
+                      placeholder="Buscar produtos..."
+                      value={searchTerm}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setSearchTerm(e.target.value)
+                      }
+                      mb={4}
+                    />
+                    {produtos.length === 0 ? (
+                      <Text color="gray.900">
+                        Nenhum produto encontrado nesta categoria.
+                      </Text>
+                    ) : (
+                      <TableContainer>
+                        <Table variant="simple" size="sm">
+                          <Thead>
+                            <Tr>
+                              <Th>Produto</Th>
+                              {/* <Th isNumeric>Preço Atacado</Th>
+                                                <Th isNumeric>Preço Varejo</Th> */}
+                              <Th isNumeric>Estoque</Th>
+                              <Th>Ação</Th>
                             </Tr>
-                          ))}
-                        </Tbody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </>
-              )}
-            </>
-          )}
+                          </Thead>
+                          <Tbody>
+                            {filteredProducts.map((prod: Produto) => (
+                              <Tr key={prod.id} _hover={{ bg: "gray.100" }}>
+                                <Td fontSize={"xs"}>{prod.nome}</Td>
+                                <Td isNumeric>{prod.quantidade_estoque}</Td>
+                                <Td>
+                                  <Button
+                                    size="xs"
+                                    colorScheme="blue"
+                                    onClick={() => adicionarAoCarrinho(prod)}
+                                  >
+                                    Adicionar
+                                  </Button>
+                                </Td>
+                              </Tr>
+                            ))}
+                          </Tbody>
+                        </Table>
+                      </TableContainer>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+
+            <Button
+              colorScheme="blue"
+              m={4}
+              onClick={() => {
+                {
+                  if (carrinho.length > 0) {
+                    setCarrinho([]);
+                  }
+                  onOpen();
+                }
+              }}
+              leftIcon={<FaShoppingCart />}
+            >
+              Abrir Carrinhos
+            </Button>
+          </Box>
         </Box>
+        {/* FIM Lado direito: Categorias + Produtos */}
       </Flex>
     </Box>
   );

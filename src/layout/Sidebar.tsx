@@ -40,11 +40,12 @@ const menuItems = [
     { label: 'Métricas', path: '/graficos', icon: FiBarChart2, roles: ['superadmin', 'admin'] },
     { label: 'Usuários (Admins)', path: '/usuarios/admins', icon: FiUserCheck, roles: ['superadmin'] },
     { label: 'Usuários (Vendedores)', path: '/usuarios/vendedores', icon: FiUserPlus, roles: ['superadmin', 'admin'] },
+    {label: 'Fechamento', path: '/fechamento', icon: FiLogOut, roles: ['superadmin', 'admin']},
 ];
 
 export default function SidebarMenu() {
     const { user, logout } = useAuth();
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(true);
 
     const toggleSidebar = () => setCollapsed(prev => !prev);
 
