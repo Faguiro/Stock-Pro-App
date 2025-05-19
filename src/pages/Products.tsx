@@ -2,43 +2,42 @@ import api from "../lib/api";
 import {
   Box,
   Button,
-  Card,
-  CardBody,
-  CardFooter,
+
   Heading,
   SimpleGrid,
   Text,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
+  // Modal,
+  // ModalOverlay,
+  // ModalContent,
+  // ModalHeader,
+  // ModalFooter,
+  // ModalBody,
+  // ModalCloseButton,
   useDisclosure,
-  FormControl,
-  FormLabel,
+  // FormControl,
+  // FormLabel,
   Input,
-  NumberInput,
-  NumberInputField,
-  Select,
-  useToast,
+  // NumberInput,
+  // NumberInputField,
+  // Select,
+  // useToast,
   Spinner,
   Alert,
   AlertIcon,
-  Tag,
-  Flex,
+  // Tag,
+
   List,
-  ListItem,
+
   HStack,
   IconButton,
 } from "@chakra-ui/react";
-import { NumericFormat } from "react-number-format";
+// import { NumericFormat } from "react-number-format";
 import { FaList, FaTh } from "react-icons/fa";
 import { useEffect, useState } from "react";
 import type { Categorias } from "./PDV";
+// import { handleAddStock, handleCreateProduct, handleDeleteProduct, handleEditClick, handleUpdateProduct } from "../components/Produto/useProductHandlers.ts";
 
-interface Product {
+export interface Product {
   id: number;
   codigo: string;
   nome: string;
@@ -50,29 +49,62 @@ interface Product {
   quantidade_estoque: number;
 }
 
-interface Promotion {
+export interface Promotion {
   id: number;
-  nome: string;
-  desconto: number;
+  tipo: 'cupom' | 'desconto_fixo' | 'desconto_percentual' | 'desconto';
+  valor: number;
+  data_inicio: string;
+  data_fim: string;
 }
 
-const ProductsPage = () => {
+
+
+// import { useDisclosure, useToast } from "@chakra-ui/react";
+// import { useState } from "react";
+import { useProductHandlers } from "../components/Produto/useProductHandlers.ts";
+import { ProductCard } from "../components/Produto/ProductCard.tsx";
+import { ProductListItem } from "../components/Produto/ListItem.tsx";
+import { CreateProductModal, EditProductModal, ProductDetailModal } from "../components/Produto/Modais.tsx";
+// import { Product } from "@/types/Product";
+
+export const ProductPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isEditOpen, onOpen: onEditOpen, onClose: onEditClose } = useDisclosure();
+
+  const {
+    handleCreateProduct,
+    handleUpdateProduct,
+    handleDeleteProduct,
+    handleAddStock,
+    handleEditClick,
+  } = useProductHandlers({
+    setProducts,
+    onClose,
+    onEditClose,
+    onEditOpen,
+    setProductToEdit,
+  });
+
+
+  // const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  // const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const { 
-    isOpen: isEditOpen, 
-    onOpen: onEditOpen, 
-    onClose: onEditClose 
-  } = useDisclosure();
+  // const { isOpen, onOpen, onClose } = useDisclosure();
+  // const { 
+  //   isOpen: isEditOpen, 
+  //   onOpen: onEditOpen, 
+  //   onClose: onEditClose 
+  // } = useDisclosure();
   const [searchTerm, setSearchTerm] = useState("");
   const [categorias, setCategorias] = useState<Categorias[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  const toast = useToast();
+  // const toast = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,111 +137,6 @@ const ProductsPage = () => {
     fetchData();
   }, []);
 
-  const handleCreateProduct = async (newProductData: Omit<Product, "id">) => {
-    try {
-      const response = await api.post("/products", newProductData);
-      if (response.status >= 200 && response.status < 300) {
-        const createdProduct = response.data;
-        setProducts((prev) => [...prev, createdProduct]);
-        onClose();
-        toast({
-          title: "Produto criado",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: (error as Error).message,
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const handleUpdateProduct = async (updatedProduct: Product) => {
-    try {
-      const response = await api.put(`/products/${updatedProduct.id}`, updatedProduct);
-      if (response.status >= 200 && response.status < 300) {
-        setProducts(products.map(p => 
-          p.id === updatedProduct.id ? updatedProduct : p
-        ));
-        onEditClose();
-        toast({
-          title: "Produto atualizado",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erro ao atualizar produto",
-        description: (error as Error).message,
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const handleDeleteProduct = async (productId: number) => {
-    try {
-      await api.delete(`/products/${productId}`);
-      setProducts(products.filter((p) => p.id !== productId));
-      toast({
-        title: "Produto deletado",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-    } catch (err) {
-      toast({
-        title: "Erro",
-        description: (err as Error).message,
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const handleAddStock = async (productId: number, quantityToAdd: number) => {
-    try {
-      await api.put(`/stock/${productId}`, { quantity: quantityToAdd });
-
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === productId
-            ? { ...p, quantidade_estoque: p.quantidade_estoque + quantityToAdd }
-            : p
-        )
-      );
-
-      toast({
-        title: "Estoque atualizado",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-    } catch (err) {
-      toast({
-        title: "Erro ao adicionar estoque",
-        description: (err as Error).message,
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const handleEditClick = (product: Product) => {
-    setProductToEdit(product);
-    onEditOpen();
-  };
 
   const filteredProducts = products.filter(
     (product) =>
@@ -315,595 +242,19 @@ const ProductsPage = () => {
         onUpdate={handleUpdateProduct}
         product={productToEdit}
         categorias={categorias}
+        onAddStock={handleAddStock}
       />
 
       <ProductDetailModal
         product={selectedProduct}
         categorias={categorias}
         onClose={() => setSelectedProduct(null)}
-        onAddStock={handleAddStock}
+        // onAddStock={handleAddStock}
         onEdit={handleEditClick}
       />
     </Box>
   );
 };
 
-// Componente de Card
-const ProductCard = ({
-  product,
-  categorias,
-  onSelect,
-  onDelete,
-  onEdit,
-}: {
-  product: Product;
-  categorias: Categorias[];
-  onSelect: (product: Product) => void;
-  onDelete: (id: number) => void;
-  onEdit: (product: Product) => void;
-}) => (
-  <Card
-    boxShadow="md"
-    _hover={{ transform: "translateY(-2px)", transition: "0.2s" }}
-  >
-    <CardBody>
-      <Heading size="md" mb={2}>
-        {product.nome}
-      </Heading>
-      <Text fontSize="sm" color="gray.600">
-        {product.codigo}
-      </Text>
-      <Text fontSize="sm" color="gray.600">
-        {categorias.find((cat) => cat.id === product.categoria_id)?.nome}
-      </Text>
 
-      <Flex align="center" mt={3}>
-        <Text fontWeight="semibold">Estoque:</Text>
-        <Tag
-          ml={2}
-          colorScheme={
-            product.quantidade_estoque === 0
-              ? "red"
-              : product.quantidade_estoque < 10
-              ? "orange"
-              : "green"
-          }
-        >
-          {product.quantidade_estoque}
-          {product.quantidade_estoque < 10 && " (Baixo)"}
-        </Tag>
-      </Flex>
-
-      <Text mt={3} fontSize="xl" fontWeight="bold">
-        R$ {product.preco_venda.toFixed(2)}
-      </Text>
-    </CardBody>
-
-    <CardFooter borderTop="1px" borderColor="gray.100">
-      <Button
-        colorScheme="teal"
-        variant="outline"
-        onClick={() => onSelect(product)}
-        mr={2}
-      >
-        Detalhes
-      </Button>
-      <Button
-        colorScheme="blue"
-        variant="ghost"
-        onClick={() => onEdit(product)}
-        mr={2}
-      >
-        Editar
-      </Button>
-      <Button
-        colorScheme="red"
-        variant="ghost"
-        onClick={() => onDelete(product.id)}
-      >
-        Excluir
-      </Button>
-    </CardFooter>
-  </Card>
-);
-
-// Componente de List Item
-const ProductListItem = ({
-  product,
-  categorias,
-  onSelect,
-  onDelete,
-  onEdit,
-}: {
-  product: Product;
-  categorias: Categorias[];
-  onSelect: (product: Product) => void;
-  onDelete: (id: number) => void;
-  onEdit: (product: Product) => void;
-}) => (
-  <ListItem
-    p={4}
-    borderWidth="1px"
-    borderRadius="md"
-    _hover={{ shadow: "md" }}
-    display="flex"
-    justifyContent="space-between"
-    alignItems="center"
-  >
-    <Box>
-      <Flex align="center" mb={1}>
-        <Heading size="sm" mr={3}>
-          {product.nome}
-        </Heading>
-        <Text fontSize="sm" color="gray.600">
-          {categorias.find((cat) => cat.id === product.categoria_id)?.nome}
-        </Text>
-      </Flex>
-
-      <Flex align="center">
-        <Text mr={3}>
-          Estoque:
-          <Tag
-            ml={2}
-            colorScheme={
-              product.quantidade_estoque === 0
-                ? "red"
-                : product.quantidade_estoque < 10
-                ? "orange"
-                : "green"
-            }
-          >
-            {product.quantidade_estoque}
-            {product.quantidade_estoque < 10 && " (Baixo)"}
-          </Tag>
-        </Text>
-
-        <Text fontWeight="bold">R$ {product.preco_venda.toFixed(2)}</Text>
-      </Flex>
-    </Box>
-
-    <HStack spacing={2}>
-      <Button
-        size="sm"
-        colorScheme="teal"
-        variant="outline"
-        onClick={() => onSelect(product)}
-      >
-        Detalhes
-      </Button>
-      <Button
-        size="sm"
-        colorScheme="blue"
-        variant="ghost"
-        onClick={() => onEdit(product)}
-      >
-        Editar
-      </Button>
-      <Button
-        size="sm"
-        colorScheme="red"
-        variant="ghost"
-        onClick={() => onDelete(product.id)}
-      >
-        Excluir
-      </Button>
-    </HStack>
-  </ListItem>
-);
-
-// Componente de Modal para Criar Produto
-export const CreateProductModal = ({
-  isOpen,
-  onClose,
-  onCreate,
-  categorias,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onCreate: (product: Omit<Product, "id">) => void;
-  categorias: Categorias[];
-}) => {
-  const [formData, setFormData] = useState({
-    nome: "",
-    codigo: "",
-    categoria_id: categorias[0]?.id || 1,
-    preco_compra: 0,
-    preco_venda: 0,
-    preco_atacado: undefined as number | undefined,
-    promocoes: [] as Promotion[],
-    quantidade_estoque: 0,
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onCreate(formData);
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Novo Produto</ModalHeader>
-        <ModalCloseButton />
-        <form onSubmit={handleSubmit}>
-          <ModalBody>
-            <FormControl isRequired mb={4}>
-              <FormLabel>Nome do Produto</FormLabel>
-              <Input
-                value={formData.nome}
-                onChange={(e) =>
-                  setFormData({ ...formData, nome: e.target.value })
-                }
-              />
-            </FormControl>
-
-            <FormControl mb={4}>
-              <FormLabel>Código de barras</FormLabel>
-              <Input
-                value={formData.codigo}
-                onChange={(e) =>
-                  setFormData({ ...formData, codigo: e.target.value })
-                }
-              />
-            </FormControl>
-
-            <FormControl isRequired mb={4}>
-              <FormLabel>Categoria</FormLabel>
-              <Select
-                value={formData.categoria_id}
-                onChange={(e) =>
-                  setFormData({ ...formData, categoria_id: +e.target.value })
-                }
-              >
-                {categorias.map((cat: Categorias) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.nome}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-
-            <SimpleGrid columns={2} spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Preço de Compra</FormLabel>
-                <NumericFormat
-                  customInput={Input}
-                  value={formData.preco_compra}
-                  onValueChange={(values) =>
-                    setFormData({
-                      ...formData,
-                      preco_compra: Number(values.value),
-                    })
-                  }
-                  thousandSeparator="."
-                  decimalSeparator=","
-                  prefix="R$ "
-                  decimalScale={2}
-                  fixedDecimalScale
-                  allowNegative={false}
-                />
-              </FormControl>
-
-              <FormControl isRequired>
-                <FormLabel>Preço de Venda</FormLabel>
-                <NumericFormat
-                  customInput={Input}
-                  value={formData.preco_venda}
-                  onValueChange={(values) =>
-                    setFormData({
-                      ...formData,
-                      preco_venda: Number(values.value), 
-                    })
-                  }
-                  thousandSeparator="."
-                  decimalSeparator=","
-                  prefix="R$ "
-                  decimalScale={2}
-                  fixedDecimalScale
-                  allowNegative={false}
-                />
-              </FormControl>
-            </SimpleGrid>
-
-            <FormControl mt={4}>
-              <FormLabel>Preço Atacado</FormLabel>
-              <NumericFormat
-                customInput={Input}
-                value={formData.preco_atacado || ""}
-                onValueChange={(values) =>
-                  setFormData({ ...formData, preco_atacado: Number(values.value) })
-                }
-                thousandSeparator="."
-                decimalSeparator=","
-                prefix="R$ "
-                decimalScale={2}
-                fixedDecimalScale
-                allowNegative={false}
-              />
-            </FormControl>
-          </ModalBody>
-
-          <ModalFooter>
-            <Button type="submit" colorScheme="blue" mr={3}>
-              Salvar
-            </Button>
-            <Button onClick={onClose}>Cancelar</Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
-  );
-};
-
-// Componente de Modal para Editar Produto
-const EditProductModal = ({
-  isOpen,
-  onClose,
-  onUpdate,
-  product,
-  categorias,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onUpdate: (product: Product) => void;
-  product: Product | null;
-  categorias: Categorias[];
-}) => {
-  const [formData, setFormData] = useState<Product | null>(null);
-
-  useEffect(() => {
-    if (product) {
-      setFormData({
-        ...product,
-        preco_atacado: product.preco_atacado || undefined,
-      });
-    }
-  }, [product]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (formData) {
-      onUpdate(formData);
-    }
-  };
-
-  if (!product || !formData) return null;
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Editar Produto</ModalHeader>
-        <ModalCloseButton />
-        <form onSubmit={handleSubmit}>
-          <ModalBody>
-            <FormControl isRequired mb={4}>
-              <FormLabel>Nome do Produto</FormLabel>
-              <Input
-                value={formData.nome}
-                onChange={(e) =>
-                  setFormData({ ...formData, nome: e.target.value })
-                }
-              />
-            </FormControl>
-
-            <FormControl mb={4}>
-              <FormLabel>Código de barras</FormLabel>
-              <Input
-                value={formData.codigo}
-                onChange={(e) =>
-                  setFormData({ ...formData, codigo: e.target.value })
-                }
-              />
-            </FormControl>
-
-            <FormControl isRequired mb={4}>
-              <FormLabel>Categoria</FormLabel>
-              <Select
-                value={formData.categoria_id}
-                onChange={(e) =>
-                  setFormData({ ...formData, categoria_id: +e.target.value })
-                }
-              >
-                {categorias.map((cat: Categorias) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.nome}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-
-            <SimpleGrid columns={2} spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Preço de Compra</FormLabel>
-                <NumericFormat
-                  customInput={Input}
-                  value={formData.preco_compra}
-                  onValueChange={(values) =>
-                    setFormData({
-                      ...formData,
-                      preco_compra: Number(values.value),
-                    })
-                  }
-                  thousandSeparator="."
-                  decimalSeparator=","
-                  prefix="R$ "
-                  decimalScale={2}
-                  fixedDecimalScale
-                  allowNegative={false}
-                />
-              </FormControl>
-
-              <FormControl isRequired>
-                <FormLabel>Preço de Venda</FormLabel>
-                <NumericFormat
-                  customInput={Input}
-                  value={formData.preco_venda}
-                  onValueChange={(values) =>
-                    setFormData({
-                      ...formData,
-                      preco_venda: Number(values.value), 
-                    })
-                  }
-                  thousandSeparator="."
-                  decimalSeparator=","
-                  prefix="R$ "
-                  decimalScale={2}
-                  fixedDecimalScale
-                  allowNegative={false}
-                />
-              </FormControl>
-            </SimpleGrid>
-
-            <FormControl mt={4}>
-              <FormLabel>Preço Atacado</FormLabel>
-              <NumericFormat
-                customInput={Input}
-                value={formData.preco_atacado || ""}
-                onValueChange={(values) =>
-                  setFormData({ ...formData, preco_atacado: Number(values.value) })
-                }
-                thousandSeparator="."
-                decimalSeparator=","
-                prefix="R$ "
-                decimalScale={2}
-                fixedDecimalScale
-                allowNegative={false}
-              />
-            </FormControl>
-          </ModalBody>
-
-          <ModalFooter>
-            <Button type="submit" colorScheme="blue" mr={3}>
-              Salvar Alterações
-            </Button>
-            <Button onClick={onClose}>Cancelar</Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
-  );
-};
-
-// Componente de Modal para Detalhes do Produto
-const ProductDetailModal = ({
-  product,
-  categorias,
-  onClose,
-  onAddStock,
-  onEdit,
-}: {
-  product: Product | null;
-  categorias: Categorias[];
-  onClose: () => void;
-  onAddStock: (productId: number, quantityToAdd: number) => void;
-  onEdit: (product: Product) => void;
-}) => {
-  const [quantityToAdd, setQuantityToAdd] = useState(0);
-
-  if (!product) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (quantityToAdd > 0) {
-      onAddStock(product.id, quantityToAdd);
-      setQuantityToAdd(0);
-    }
-  };
-
-  return (
-    <Modal isOpen={!!product} onClose={onClose} size="lg">
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>{product.nome}</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          <SimpleGrid columns={2} spacing={4}>
-            <Box>
-              <Text fontWeight="semibold">Categoria:</Text>
-              <Text>
-                {
-                  categorias.find((cat: Categorias) => cat.id === product.categoria_id)
-                    ?.nome
-                }
-              </Text>
-            </Box>
-
-            <Box>
-              <Text fontWeight="semibold">Estoque:</Text>
-              <Tag
-                size="lg"
-                colorScheme={
-                  product.quantidade_estoque === 0
-                    ? "red"
-                    : product.quantidade_estoque < 10
-                    ? "orange"
-                    : "green"
-                }
-              >
-                {product.quantidade_estoque} unidades
-              </Tag>
-            </Box>
-
-            <Box>
-              <Text fontWeight="semibold">Preço de Compra:</Text>
-              <Text>R$ {product.preco_compra.toFixed(2)}</Text>
-            </Box>
-
-            <Box>
-              <Text fontWeight="semibold">Preço de Venda:</Text>
-              <Text>R$ {product.preco_venda.toFixed(2)}</Text>
-            </Box>
-
-            <Box>
-              <Text fontWeight="semibold">Preço Atacado:</Text>
-              <Text>
-                {product.preco_atacado
-                  ? `R$ ${product.preco_atacado.toFixed(2)}`
-                  : "Não aplicável"}
-              </Text>
-            </Box>
-          </SimpleGrid>
-
-          <Box mt={6}>
-            <form onSubmit={handleSubmit}>
-              <FormControl>
-                <FormLabel>Adicionar ao Estoque</FormLabel>
-                <NumberInput
-                  min={1}
-                  value={quantityToAdd}
-                  onChange={(_, value) => setQuantityToAdd(value)}
-                >
-                  <NumberInputField />
-                </NumberInput>
-              </FormControl>
-              <Button
-                type="submit"
-                mt={3}
-                colorScheme="green"
-                isDisabled={quantityToAdd <= 0}
-              >
-                Adicionar
-              </Button>
-            </form>
-          </Box>
-        </ModalBody>
-        <ModalFooter>
-          <Button 
-            colorScheme="blue" 
-            mr={3}
-            onClick={() => {
-              onEdit(product);
-              onClose();
-            }}
-          >
-            Editar
-          </Button>
-          <Button onClick={onClose}>Fechar</Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
-  );
-};
-
-export default ProductsPage;
+export default ProductPage;

@@ -32,8 +32,6 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-  Grid,
-  HStack,
   Tfoot,
   Checkbox,
 } from "@chakra-ui/react";
@@ -222,7 +220,7 @@ export default function PDV() {
 
     // Aplica promoções se existirem
     const desconto =
-      produto.promocoes?.find((p) => p.tipo === "desconto")?.valor || 0;
+      produto.promocoes?.find((p) => p.tipo === "desconto" || "coupon")?.valor || 0;
     return precoBase - desconto;
   };
   const addCliente = async (cliente: {
@@ -311,9 +309,9 @@ export default function PDV() {
             ? {
                 ...p,
                 quantidade: p.quantidade + 1,
-                preco: precoFinal,
+                preco:  precoFinal,
                 modoPreco: modoPrecoGlobal,
-                promocoes: p.promocoes ?? [],
+               promocoes: p.promocoes,
               }
             : p
         );
@@ -344,10 +342,10 @@ export default function PDV() {
             id: item.id,
             nome: item.nome,
             codigo: "",
-            quantidade_estoque: 0, // Default value or fetch the actual value if available
+            quantidade_estoque: item.quantidade,
             preco_atacado: undefined,
             preco_venda: item.preco,
-            promocoes: [],
+            promocoes: item.promocoes,
           },
           item.modoPreco,
           novaQtd

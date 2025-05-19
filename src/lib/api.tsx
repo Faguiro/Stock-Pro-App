@@ -50,7 +50,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
       console.log('Refresh token:', refreshToken);
       if (!refreshToken) {
-        ('/login');
+        window.location.href = '/login';
         return Promise.reject('No refresh access_token found');
       }
 
@@ -72,7 +72,7 @@ api.interceptors.response.use(
           processQueue(err, null);
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
-          ('/login');
+          window.location.href = '/login';
           return Promise.reject(err);
         } finally {
           isRefreshing = false;
