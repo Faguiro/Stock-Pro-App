@@ -56,6 +56,12 @@ export interface Promotion {
   data_inicio: string;
   data_fim: string;
 }
+export interface PromotionCreate {
+  tipo: 'cupom' | 'desconto_fixo' | 'desconto_percentual' | 'desconto';
+  valor: number;
+  data_inicio: string;
+  data_fim: string;
+}
 
 
 

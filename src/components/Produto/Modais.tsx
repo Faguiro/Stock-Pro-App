@@ -510,6 +510,41 @@ export const CreateProductModal = ({
     quantidade_estoque: 0,
   });
 
+  const [newPromotion, setNewPromotion] = useState<Omit<Promotion, "id">>({
+    tipo: "desconto_percentual",
+    valor: 0,
+    data_inicio: new Date().toISOString(),
+    data_fim: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  });
+  // const [quantityToAdd, setQuantityToAdd] = useState(0);
+
+  const handleAddPromotion = () => {
+    const newId =
+      formData.promocoes.length > 0
+        ? Math.max(...formData.promocoes.map((p) => p.id)) + 1
+        : 1;
+    setFormData({
+      ...formData,
+      promocoes: [...formData.promocoes, { ...newPromotion, id: newId }],
+    });
+    // reseta o formulário de promoção
+    setNewPromotion({
+      tipo: "desconto_percentual",
+      valor: 0,
+      data_inicio: new Date().toISOString(),
+      data_fim: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+  };
+
+  const handleAddStock = (val:number) => {
+    if (val > 0) {
+      setFormData({
+        ...formData,
+        quantidade_estoque:  val,
+      });
+  
+    }
+  };
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onCreate(formData);
@@ -619,6 +654,139 @@ export const CreateProductModal = ({
                 fixedDecimalScale
                 allowNegative={false}
               />
+            </FormControl>
+
+            <Box mb={6} borderWidth="1px" borderRadius="lg" p={4}>
+              <Text fontWeight="bold" mb={2}>
+                Promoções
+              </Text>
+              {formData.promocoes.length > 0 ? (
+                formData.promocoes.map((promo) => (
+                  <Box
+                    key={promo.id}
+                    p={2}
+                    borderWidth="1px"
+                    borderRadius="md"
+                    mb={2}
+                  >
+                    <Flex justify="space-between" align="center">
+                      <Box>
+                        <Text fontWeight="semibold">Tipo: {promo.tipo}</Text>
+                        <Text>Valor: {promo.valor}</Text>
+                        <Text>
+                          Início:{" "}
+                          {new Date(promo.data_inicio).toLocaleDateString()}
+                        </Text>
+                        <Text>
+                          Fim: {new Date(promo.data_fim).toLocaleDateString()}
+                        </Text>
+                      </Box>
+                      <IconButton
+                        aria-label="Remover promoção"
+                        icon={<FaTrash />}
+                        size="sm"
+                        colorScheme="red"
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            promocoes: formData.promocoes.filter(
+                              (p) => p.id !== promo.id
+                            ),
+                          })
+                        }
+                      />
+                    </Flex>
+                  </Box>
+                ))
+              ) : (
+                <Text color="gray.500" mb={4}>
+                  Nenhuma promoção cadastrada
+                </Text>
+              )}
+
+              {/* Campos p/ nova promoção */}
+              <SimpleGrid columns={2} spacing={4}>
+                <FormControl>
+                  <FormLabel>Tipo de Promoção</FormLabel>
+                  <Select
+                    value={newPromotion.tipo}
+                    onChange={(e) =>
+                      setNewPromotion({
+                        ...newPromotion,
+                        tipo: e.target.value as Promotion["tipo"],
+                      })
+                    }
+                  >
+                    <option value="cupom">Cupom</option>
+                    <option value="desconto_fixo">Desconto Fixo</option>
+                    <option value="desconto_percentual">
+                      Desconto Percentual
+                    </option>
+                  </Select>
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Valor</FormLabel>
+                  <NumberInput
+                    min={0}
+                    value={newPromotion.valor}
+                    onChange={(_, v) =>
+                      setNewPromotion({ ...newPromotion, valor: v })
+                    }
+                  >
+                    <NumberInputField />
+                  </NumberInput>
+                </FormControl>
+              </SimpleGrid>
+              <SimpleGrid columns={2} spacing={4} mt={4}>
+                <FormControl>
+                  <FormLabel>Data Início</FormLabel>
+                  <Input
+                    type="datetime-local"
+                    value={newPromotion.data_inicio.substring(0, 16)}
+                    onChange={(e) =>
+                      setNewPromotion({
+                        ...newPromotion,
+                        data_inicio: e.target.value + ":00.000Z",
+                      })
+                    }
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel>Data Fim</FormLabel>
+                  <Input
+                    type="datetime-local"
+                    value={newPromotion.data_fim.substring(0, 16)}
+                    onChange={(e) =>
+                      setNewPromotion({
+                        ...newPromotion,
+                        data_fim: e.target.value + ":00.000Z",
+                      })
+                    }
+                  />
+                </FormControl>
+              </SimpleGrid>
+              <Button
+                mt={4}
+                colorScheme="blue"
+                onClick={handleAddPromotion}
+                isDisabled={newPromotion.valor <= 0}
+              >
+                Adicionar Promoção
+              </Button>
+            </Box>
+
+            {/* Estoque Inicial — campo único */}
+            <FormControl mt={6}>
+              <FormLabel>Estoque Inicial</FormLabel>
+              <NumberInput
+                min={0}
+                value={formData.quantidade_estoque}
+                onChange={(_, val) =>
+              handleAddStock(val)              
+                }
+              >
+                <NumberInputField />
+              </NumberInput>
             </FormControl>
           </ModalBody>
 
