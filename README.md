@@ -43,7 +43,7 @@ Ideal para pequenos e médios comércios, o sistema oferece recursos completos p
 1. Clone o repositório:
 
 ```bash
-git clone [https://github.com/seu-usuario/estokpro.git](https://github.com/Faguiro/Stock-Pro-App.git)
+git clone https://github.com/Faguiro/Stock-Pro-App.git
 cd Stock-Pro-App
 npm install
 npm run dev
