@@ -55,6 +55,9 @@ Acesse via http://localhost:5173
 - Para gerar a versão desktop:
 - Tauri CLI
 - C++ Compiller
+- [Baixe aqui o servidor local: 💾](https://raw.githubusercontent.com/Faguiro/API-Stock-Pro/refs/heads/main/main.exe?token=GHSAT0AAAAAADBF5B3Z2YA2O6BUMADCCWSI2BMZSCA)
+  
+- Acesse via: http://localhost:8000/docs
 
 
 ** 🤝 Contribuindo
