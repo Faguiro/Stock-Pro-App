@@ -1,55 +1,80 @@
-# React + TypeScript + Vite
+# 📦 Estokpro
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Estokpro** é uma aplicação moderna de controle de estoque e ponto de venda, desenvolvida com **React**, **TypeScript** e **Vite**, com suporte multiplataforma — podendo rodar tanto como **aplicativo desktop** (via [Tauri](https://tauri.app/) e [Nuitka](https://nuitka.net/)) quanto como **aplicação web em servidor**.
 
-Currently, two official plugins are available:
+Ideal para pequenos e médios comércios, o sistema oferece recursos completos para gerenciar produtos, categorias, vendas, promoções, clientes e muito mais.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🛠️ Tecnologias Utilizadas
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- ⚛️ [React](https://reactjs.org/) + [TypeScript](https://www.typescriptlang.org/)
+- ⚡ [Vite](https://vitejs.dev/) – Build rápido e leve
+- 💅 [Chakra UI](https://chakra-ui.com/) – Componentes acessíveis e estilizados
+- 🔒 Zod + React Hook Form – Validação e controle de formulários
+- 📁 React Router DOM – Navegação SPA
+- 🖨️ jsPDF + SheetJS – Exportação de relatórios (PDF e XLSX)
+- 🧩 Tauri + Nuitka – Deploy como aplicativo desktop com backend Python
+- 🧠 Integração com API (ex: FastAPI ou similar)
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+---
+
+## 🔑 Funcionalidades
+
+- 📦 **Gestão de Produtos** com múltiplos preços (varejo, atacado, promoção)
+- 🏷️ **Categorias de produtos**
+- 👥 **Clientes** com preferências e histórico
+- 🛒 **Carrinho de vendas** com possibilidade de salvar e recuperar
+- 🎟️ **Promoções** com cupons e descontos personalizados
+- 💰 **Ponto de Venda (PDV)** intuitivo com resumo e controle de itens
+- 🧾 **Fechamento de caixa diário**
+- 📊 **Métricas e gráficos de vendas**
+- 📤 **Exportação de relatórios** em PDF e XLSX
+- 🔐 **Controle de acesso** com múltiplos níveis de usuário:
+  - superAdmin
+  - admin
+  - vendedor
+
+---
+
+## ⚙️ Instalação (modo desenvolvimento)
+
+1. Clone o repositório:
+
+```bash
+git clone https://github.com/seu-usuario/estokpro.git
+cd estokpro
+npm install
+npm run dev
 ```
+Acesse via http://localhost:5173
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+** 🖥️ Versão Desktop
+- Para gerar a versão desktop:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+# Requisitos:
+# - Node.js
+# - Python + Nuitka
+# - Tauri CLI
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
-# API_controle_de_estoque
+# Build do frontend
+npm run build
+
+# Build do backend com Nuitka
+cd backend
+nuitka3 --standalone main.py
+
+# Build final com Tauri
+npm run tauri build
+
+
+** 🤝 Contribuindo
+Sinta-se à vontade para abrir issues, sugerir melhorias ou enviar pull requests!
+
+** 📄 Licença
+Distribuído sob a licença MIT. Veja LICENSE para mais detalhes.
+
+Feito com 💙 por Faguiro.
+
+
+
