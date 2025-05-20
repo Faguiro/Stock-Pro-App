@@ -1,4 +1,5 @@
-# 📦 Estokpro
+# 📦 Stock-Pro App
+
 
 **Estokpro** é uma aplicação moderna de controle de estoque e ponto de venda, desenvolvida com **React**, **TypeScript** e **Vite**, com suporte multiplataforma — podendo rodar tanto como **aplicativo desktop** (via [Tauri](https://tauri.app/) e [Nuitka](https://nuitka.net/)) quanto como **aplicação web em servidor**.
 
@@ -42,8 +43,8 @@ Ideal para pequenos e médios comércios, o sistema oferece recursos completos p
 1. Clone o repositório:
 
 ```bash
-git clone https://github.com/seu-usuario/estokpro.git
-cd estokpro
+git clone [https://github.com/seu-usuario/estokpro.git](https://github.com/Faguiro/Stock-Pro-App.git)
+cd Stock-Pro-App
 npm install
 npm run dev
 ```
