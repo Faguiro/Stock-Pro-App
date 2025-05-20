@@ -50,6 +50,7 @@ npm run dev
 ```
 Acesse via http://localhost:5173
 
+---
 ** 🖥️ Versão Desktop
 
 - Para gerar a versão desktop:
@@ -59,12 +60,14 @@ Acesse via http://localhost:5173
   
 - Acesse via: http://localhost:8000/docs
 
-
+---
 ** 🤝 Contribuindo
 Sinta-se à vontade para abrir issues, sugerir melhorias ou enviar pull requests!
 
 ** 📄 Licença
 Distribuído sob a licença MIT. Veja LICENSE para mais detalhes.
+
+---
 
 Feito com 💙 por Faguiro.
 
