@@ -50,22 +50,10 @@ npm run dev
 Acesse via http://localhost:5173
 
 ** 🖥️ Versão Desktop
+
 - Para gerar a versão desktop:
-
-# Requisitos:
-# - Node.js
-# - Python + Nuitka
-# - Tauri CLI
-
-# Build do frontend
-npm run build
-
-# Build do backend com Nuitka
-cd backend
-nuitka3 --standalone main.py
-
-# Build final com Tauri
-npm run tauri build
+- Tauri CLI
+- C++ Compiller
 
 
 ** 🤝 Contribuindo
